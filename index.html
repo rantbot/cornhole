@@ -135,22 +135,30 @@
   /* Screen printed onto the ply. It multiplies against the surface so the grain
      shows through the ink, and carries a hairline of light along the bottom edge
      the way a raised layer of paint catches the room. */
+  /* the wordmark. painted on the ply, printed on the card. */
+  .wordmark .a, .wordmark .b { display: block; }
+  .wordmark .a {
+    font-weight: 800; text-transform: uppercase; letter-spacing: .42em;
+    text-indent: .42em; opacity: .85;
+  }
+  .wordmark .b {
+    font-weight: 800; text-transform: uppercase; letter-spacing: -.025em;
+    display: inline-block; line-height: 1;
+  }
+
+  /* screen printed onto the board. it multiplies against the surface so the
+     grain shows through the ink, and carries a hairline of light along the
+     bottom edge the way a raised layer of paint catches the room. */
   #logo {
-    position: fixed; left: 0; right: 0; top: 63%; z-index: 1;
-    transition: opacity .2s ease;
+    position: fixed; left: 0; right: 0; top: 60%; z-index: 1;
     pointer-events: none; text-align: center; mix-blend-mode: multiply;
-    opacity: .62;
+    opacity: .6; transition: opacity .2s ease;
   }
-  #logo .a, #logo .b { display: block; color: #123048; }
-  #logo .a {
-    font-size: 13px; font-weight: 800; letter-spacing: .46em; text-indent: .46em;
-    text-transform: uppercase; opacity: .8;
-  }
+  #logo .a, #logo .b { color: #123048; }
+  #logo .a { font-size: 17px; }
   #logo .b {
-    margin-top: 1px; font-size: 30px; font-weight: 800; letter-spacing: -.02em;
-    text-transform: uppercase;
-    border-top: 2px solid #123048; border-bottom: 2px solid #123048;
-    padding: 3px 0 4px; display: inline-block;
+    margin-top: 2px; font-size: 46px; padding: 4px 0 6px;
+    border-top: 3px solid #123048; border-bottom: 3px solid #123048;
     text-shadow: 0 1px 0 rgba(255,244,224,.30);
   }
   /* your remaining bags, waiting on the near end of the board */
@@ -219,7 +227,7 @@
         background: linear-gradient(180deg, transparent, var(--turn), transparent);
         box-shadow: 0 0 10px var(--turn); }
   .pl {
-    position: relative; overflow: hidden; pointer-events: auto;
+    position: relative; overflow: hidden;
     flex: 1 1 0; max-width: 46%; padding: 7px 11px 9px; border-radius: var(--r-sm);
     background: #050D14; border: 1.5px solid #1F2C38;
     box-shadow: inset 0 2px 7px rgba(0,0,0,.9);
@@ -230,7 +238,7 @@
              gap: 8px; min-width: 0; }
   .pl b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
           font-size: var(--t-sm); font-weight: 800; letter-spacing: .01em; line-height: 1.1;
-          padding-bottom: 1px; border-bottom: 1px dashed rgba(244,239,228,.35); }
+          padding-bottom: 1px; }
   #p0 b { color: var(--p1-lit); }
   #p1 b { color: var(--p2-lit); }
   .pl .row2 { display: flex; align-items: baseline; gap: 7px; }
@@ -388,20 +396,26 @@
     display: flex; align-items: center; justify-content: center;
   }
   #start {
-    flex-direction: column; gap: 20px; padding: 0 28px; text-align: center;
+    flex-direction: column; gap: 26px; padding: 0 26px; text-align: center;
     background:
       radial-gradient(110% 55% at 50% 28%, rgba(240,180,41,.20) 0%, transparent 70%),
       radial-gradient(120% 70% at 50% 40%, rgba(27,64,102,.5) 0%, transparent 74%),
       linear-gradient(180deg, #10202C 0%, #050A0F 100%);
   }
   #start.gone { display: none; }
-  #startTitle { margin: 0; font-size: var(--t-2xl); line-height: .96; font-weight: 800;
-                letter-spacing: -.045em; color: #FFF4DC; text-transform: uppercase;
-                text-shadow: 0 0 12px rgba(240,180,41,.75), 0 0 40px rgba(240,180,41,.4),
-                             0 3px 0 rgba(0,0,0,.5); }
-  #startBody  { margin: 0; max-width: 24ch; color: var(--chalk-2);
-                font-size: var(--t-md); font-weight: 500; line-height: 1.5; }
-  #startFoot  { color: var(--chalk-3); font-size: var(--t-xs); font-weight: 500; }
+  #startTitle { margin: 0; font-size: var(--t-2xl); line-height: .98; font-weight: 800;
+                letter-spacing: -.04em; color: var(--chalk); text-align: center; }
+  #brand { color: #FFF6E4; text-align: center; }
+  #brand .a { font-size: 15px; color: var(--gold); }
+  #brand .b {
+    margin-top: 5px; font-size: 46px; padding: 6px 0 8px;
+    border-top: 3px solid var(--gold); border-bottom: 3px solid var(--gold);
+    text-shadow: 0 0 26px rgba(240,180,41,.45);
+  }
+  #startBody  { margin: -8px 0 0; max-width: 26ch; color: var(--chalk-2);
+                font-size: var(--t-md); font-weight: 500; line-height: 1.45; }
+  #startFoot  { margin-top: -14px; color: var(--chalk-3);
+                font-size: var(--t-xs); font-weight: 600; }
   #summary { width: 100%; max-width: 320px; }
   #sumWon {
     padding: 14px 16px 16px; border-radius: var(--r-lg); margin-bottom: 14px;
@@ -465,6 +479,15 @@
   .sw button[aria-pressed="true"] { border-color: var(--chalk);
                box-shadow: 0 0 0 2px rgba(10,27,42,.9), 0 0 0 4px var(--chalk); }
   #settings .two .sw button { width: 30px; height: 26px; }
+  .names { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .names input {
+    width: 100%; padding: 13px 14px; border-radius: var(--r-sm);
+    background: #050D14; border: 1.5px solid #24313D; color: var(--chalk);
+    font: 800 var(--t-md) var(--sans); letter-spacing: -.01em;
+  }
+  .names input:focus { outline: none; border-color: var(--gold); }
+  #nm0 { color: var(--p1-lit); }
+  #nm1 { color: var(--p2-lit); }
   #targets { display: flex; gap: 7px; margin-bottom: 16px; }
   #targets .btn { padding: 12px 4px; text-align: center; font-size: var(--t-md); }
   #targets .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold);
@@ -476,27 +499,6 @@
   #noise .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold);
                                      background: rgba(240,180,41,.14); }
   #noise .btn[aria-pressed="true"] span { color: var(--gold); opacity: .8; }
-  #rename {
-    position: fixed; inset: 0; z-index: 13; display: none;
-    align-items: flex-start; justify-content: center; padding: 22px;
-    padding-top: 14vh; background: rgba(6,14,22,.88);
-  }
-  #rename.on { display: flex; }
-  #rename .sheet {
-    width: 100%; max-width: 320px; padding: 20px 18px 16px; border-radius: var(--r-lg);
-    background: linear-gradient(180deg, var(--panel), var(--rail));
-    border: 1.5px solid var(--line-2); box-shadow: var(--lift);
-  }
-  #rename h2 { margin: 0 0 12px; font-size: var(--t-lg); font-weight: 800;
-               letter-spacing: -.03em; color: var(--chalk); text-align: center; }
-  #renameInput {
-    width: 100%; margin-bottom: 12px; padding: 14px; border-radius: var(--r-sm);
-    background: #050D14; border: 1.5px solid #24313D; color: var(--chalk);
-    font: 800 26px var(--sans); letter-spacing: -.02em; text-align: center;
-  }
-  #renameInput:focus { outline: none; border-color: var(--gold); }
-  #rename.e0 #renameInput { color: var(--p1-lit); }
-  #rename.e1 #renameInput { color: var(--p2-lit); }
   #confirm { z-index: 11; display: none; padding: 26px; background: rgba(6,14,22,.84); }
   #confirm.on { display: flex; }
   #confirm .sheet {
@@ -526,9 +528,10 @@
              background: rgba(244,239,228,.14); color: var(--chalk-2);
              border: 0; font-size: var(--t-xs); line-height: 1; }
   #build {
-    margin-top: -6px; padding: 4px 10px; border-radius: var(--r-pill);
-    background: rgba(244,239,228,.07); border: 1px solid var(--line);
-    color: var(--chalk-2); font: 700 var(--t-sm) ui-monospace, Menlo, monospace;
+    position: absolute; bottom: calc(14px + env(safe-area-inset-bottom));
+    padding: 4px 11px; border-radius: var(--r-pill);
+    background: rgba(244,239,228,.06); border: 1px solid var(--line);
+    color: var(--chalk-3); font: 700 var(--t-xs) ui-monospace, Menlo, monospace;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -541,7 +544,7 @@
   <div id="oob"></div>
   <div id="board"></div>
   <div id="hole"></div>
-  <div id="logo">
+  <div id="logo" class="wordmark">
     <span class="a">Pocket</span>
     <span class="b">Cornhole</span>
   </div>
@@ -556,8 +559,12 @@
   </div>
   <div id="burst"></div>
   <div id="start">
-    <h1 id="startTitle">Pocket<br>Cornhole</h1>
-    <p id="startBody">Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
+    <div id="brand" class="wordmark">
+      <span class="a">Pocket</span>
+      <span class="b">Cornhole</span>
+    </div>
+    <h1 id="startTitle" class="hide"></h1>
+    <p id="startBody">Lay the phone flat. Throw a foil-wrapped sugar packet at it.</p>
     <div id="summary" class="hide">
       <div id="sumWon"></div>
       <div id="sumTable">
@@ -566,12 +573,12 @@
       </div>
     </div>
         <div id="modes">
-      <button class="btn" id="m1"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="20" cy="9" r="5.4" fill="#5aa9ff"/><path d="M9.5 27c0-5.8 4.7-9.5 10.5-9.5S30.5 21.2 30.5 27z" fill="#5aa9ff"/></svg><div>Practice<span>one player</span></div></button>
-      <button class="btn" id="m2"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="12" cy="10" r="4.8" fill="#5aa9ff"/><path d="M2.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#5aa9ff"/><circle cx="28" cy="10" r="4.8" fill="#ff9d42"/><path d="M18.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#ff9d42"/></svg><div>Head to head<span>two players</span></div></button>
+      <button class="btn" id="m1"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="20" cy="9" r="5.4" fill="var(--p1)"/><path d="M9.5 27c0-5.8 4.7-9.5 10.5-9.5S30.5 21.2 30.5 27z" fill="var(--p1)"/></svg><div>Practice<span>one player</span></div></button>
+      <button class="btn" id="m2"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="12" cy="10" r="4.8" fill="var(--p1)"/><path d="M2.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="var(--p1)"/><circle cx="28" cy="10" r="4.8" fill="var(--p2)"/><path d="M18.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="var(--p2)"/></svg><div>Head to head<span>two players</span></div></button>
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b71</div>
+    <div id="build">b73</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -589,20 +596,20 @@
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
 
-  <div id="rename">
-    <div class="sheet">
-      <h2 id="renameTitle">Name</h2>
-      <input id="renameInput" type="text" maxlength="12" autocomplete="off"
-             autocapitalize="words" spellcheck="false">
-      <button class="btn btn-go" id="renameDone">Done</button>
-    </div>
-  </div>
   <div id="settings">
     <div class="sheet">
       <h2>Settings</h2>
 
       <h3>Board finish</h3>
       <div class="sw" id="swWood"></div>
+
+      <h3>Players</h3>
+      <div class="names">
+        <input id="nm0" type="text" maxlength="12" placeholder="Player 1"
+               autocomplete="off" autocapitalize="words" spellcheck="false">
+        <input id="nm1" type="text" maxlength="12" placeholder="Player 2"
+               autocomplete="off" autocapitalize="words" spellcheck="false">
+      </div>
 
       <h3>Bags</h3>
       <div class="two">
@@ -873,6 +880,8 @@ function endFrame(){
   if (done) {
     gameOver = true;
     var champ = scores[0] > scores[1] ? 0 : 1;
+    $("brand").classList.add("hide");
+    $("startTitle").classList.remove("hide");
     $("startTitle").innerHTML = name(champ) + "<br>wins";
     $("sumWon").className = "w" + champ;
     $("sumWon").innerHTML = scores[champ] + " to " + scores[1 - champ] +
@@ -893,6 +902,8 @@ function endFrame(){
     return;
   }
 
+  $("brand").classList.add("hide");
+  $("startTitle").classList.remove("hide");
   $("startTitle").innerHTML = "Round " + (frame - 1);
   $("sumWon").className = win < 0 ? "none" : "w" + win;
   $("sumWon").innerHTML = win < 0
@@ -1298,7 +1309,7 @@ function dm(){
 function offBoard(el){
   if (!el || !el.closest) return false;
   if (el.tagName === "BUTTON" || el.tagName === "INPUT") return true;
-  return !!el.closest("#gate, #hud, #foot, #install, #start, #confirm, #settings, #rename");
+  return !!el.closest("#gate, #hud, #foot, #install, #start, #confirm, #settings");
 }
 
 function contact(t){
@@ -1484,6 +1495,9 @@ function paintSwatches(){
     b.setAttribute("aria-pressed", +b.getAttribute("data-t") === cfg.target ? "true" : "false");
   });
   var solo = (typeof players !== "undefined" && players === 1);
+  $("nm0").value = cfg.n1 === "Player 1" ? "" : cfg.n1;
+  $("nm1").value = cfg.n2 === "Player 2" ? "" : cfg.n2;
+  $("nm1").style.display = solo ? "none" : "";
   $("lblP1").textContent = name(0);
   $("lblP2").textContent = name(1);
   $("lblP2").style.display = solo ? "none" : "";
@@ -1505,36 +1519,6 @@ function paintSwatches(){
     applyCfg();
   });
 });
-function openRename(n){
-  editing = true;
-  $("rename").className = "on e" + n;
-  $("renameTitle").textContent = "Who is throwing " + (n === 0 ? "first" : "second") + "?";
-  var inp = $("renameInput");
-  inp.placeholder = "Player " + (n + 1);
-  inp.value = name(n) === "Player " + (n + 1) ? "" : name(n);
-  inp.dataset.who = n;
-  setTimeout(function(){ inp.focus(); inp.select(); }, 60);
-}
-function closeRename(){
-  var inp = $("renameInput"), n = +inp.dataset.who;
-  var v = inp.value.trim().slice(0, 12);
-  if (n === 0) cfg.n1 = v || "Player 1"; else cfg.n2 = v || "Player 2";
-  try { localStorage.setItem("pocket-cfg", JSON.stringify(cfg)); } catch (e) {}
-  $("rename").className = "";
-  editing = false;
-  deafUntil = performance.now() + 700;
-  hud();
-}
-[0, 1].forEach(function(n){
-  $("p" + n).addEventListener("click", function(e){
-    e.stopPropagation();
-    if (players === 1 && n === 1) return;
-    openRename(n);
-  });
-});
-$("renameDone").addEventListener("click", function(e){ e.stopPropagation(); closeRename(); });
-$("renameInput").addEventListener("keydown", function(e){ if (e.key === "Enter") closeRename(); });
-$("renameInput").addEventListener("click", function(e){ e.stopPropagation(); });
 
 $("gate").addEventListener("click", function(e){
   e.stopPropagation();
@@ -1548,11 +1532,26 @@ $("gate").addEventListener("click", function(e){
   $("why").textContent = players === 2 ? name(turn) + ", throw" : "Throw";
   beep(1250, 60);
 });
+[0, 1].forEach(function(n){
+  var el = $("nm" + n);
+  el.addEventListener("input", function(){
+    var v = this.value.trim().slice(0, 12);
+    if (n === 0) cfg.n1 = v || "Player 1"; else cfg.n2 = v || "Player 2";
+    try { localStorage.setItem("pocket-cfg", JSON.stringify(cfg)); } catch (err) {}
+    hud();
+  });
+  el.addEventListener("click", function(e){ e.stopPropagation(); });
+});
 $("gear").addEventListener("click", function(e){
   e.stopPropagation(); paintSwatches(); $("settings").classList.add("on");
 });
+$("gear").addEventListener("click", function(){ editing = true; });
 $("setDone").addEventListener("click", function(e){
-  e.stopPropagation(); $("settings").classList.remove("on"); goFullscreen();
+  e.stopPropagation();
+  $("settings").classList.remove("on");
+  editing = false;
+  deafUntil = performance.now() + 700;
+  goFullscreen();
 });
 applyCfg();
 
@@ -1567,15 +1566,16 @@ function exitGame(){
   document.body.className = "";
   $("big").classList.remove("on");
   $("live").style.display = "none";
-  $("rename").className = ""; $("settings").classList.remove("on");
+  $("settings").classList.remove("on");
   lastImpact = performance.now(); deafUntil = performance.now() + 1e6;
   $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0; onBoard = [];
   frame = 1; bags = [BAGS, BAGS];
   scores = [0, 0]; turn = 0; paused = true; inning = [0, 0]; onBoard = []; gameOver = false;
-  $("startTitle").innerHTML = "Pocket<br>Cornhole";
+  $("brand").classList.remove("hide");
+  $("startTitle").classList.add("hide");
   $("summary").classList.add("hide");
   $("startBody").classList.remove("hide");
-  $("startBody").textContent = "Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.";
+  $("startBody").textContent = "Lay the phone flat. Throw a foil-wrapped sugar packet at it.";
   $("startFoot").textContent = "Then hands off the phone for a moment.";
   $("modes").classList.remove("hide");
   $("startTap").classList.add("hide");
