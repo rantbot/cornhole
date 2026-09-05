@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>packet cornhole</title>
+<title>Pocket Cornhole</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Packet">
+<meta name="apple-mobile-web-app-title" content="Pocket Cornhole">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,17 +28,46 @@
   #dots, #big, #hud, #why { pointer-events: none; }
 
   /* the board, inset from the edges where detection is least reliable */
+  /* birch ply with a painted trim, lit from the top left like a real board */
   #board { position: fixed; left: 3%; right: 3%; top: 5%; bottom: 5%; z-index: 0;
-           border: 2px solid #2f3a45; border-radius: 16px; pointer-events: none;
-           background: #121820; }
+           border-radius: 14px; pointer-events: none;
+           border: 7px solid #1d3f5e;
+           box-shadow: 0 10px 26px -12px #000, inset 0 0 60px rgba(60,28,4,.42);
+           background:
+             repeating-linear-gradient(93deg, rgba(74,44,16,.10) 0 1px, transparent 1px 7px),
+             repeating-linear-gradient(88deg, rgba(255,232,196,.07) 0 1px, transparent 1px 23px),
+             linear-gradient(180deg, rgba(0,0,0,0) 62%, rgba(60,30,6,.22) 100%),
+             linear-gradient(152deg, #c78e4f 0%, #b3763a 38%, #a3682f 66%, #b07439 100%); }
+  /* the plank seams */
+  #board::after { content: ""; position: absolute; inset: 0; border-radius: 7px;
+                  background: repeating-linear-gradient(180deg,
+                    transparent 0 22%, rgba(72,40,10,.30) 22% calc(22% + 2px)); }
   #hole  { position: fixed; left: 50%; top: 33%; width: 42%; z-index: 0;
            aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%;
-           background: #05070a; border: 2px solid #3d4c5a; pointer-events: none; }
-  #hole::after { content: "3"; position: absolute; inset: 0; display: flex;
-                 align-items: center; justify-content: center;
-                 font: 800 46px -apple-system, system-ui, sans-serif; color: #2b3742; }
-  #dots { position: fixed; inset: 0; z-index: 1; }
-  body.three { background: #8a6a00; }
+           pointer-events: none;
+           background: radial-gradient(circle at 50% 34%, #241708 0%, #120b04 46%, #05030a 100%);
+           box-shadow: inset 0 9px 16px rgba(0,0,0,.95),
+                       inset 0 -3px 7px rgba(190,138,80,.30),
+                       0 0 0 3px rgba(88,52,18,.75); }
+  #hole::after { content: ""; position: absolute; inset: 12%; border-radius: 50%;
+                 box-shadow: inset 0 6px 12px rgba(0,0,0,.8); }  #dots { position: fixed; inset: 0; z-index: 1; }
+  body.three { background: #8a6a00; animation: goldflash 900ms ease-out; }
+  @keyframes goldflash {
+    0%   { background: #fff3c4; }
+    22%  { background: #ffd54f; }
+    100% { background: #8a6a00; }
+  }
+  body.lose { animation: badshake 520ms cubic-bezier(.36,.07,.19,.97); }
+  @keyframes badshake {
+    0%,100%      { transform: translateX(0); }
+    12%,36%,60%  { transform: translateX(-11px); }
+    24%,48%,72%  { transform: translateX(11px); }
+    84%          { transform: translateX(-5px); }
+  }
+  #big.huge { font-size: 13vw; letter-spacing: -.02em; }
+  @media (prefers-reduced-motion: reduce) {
+    body.three, body.lose { animation: none; }
+  }
   #burst { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
   .bit { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px;
          border-radius: 3px; opacity: 0;
@@ -57,16 +86,27 @@
   @media (prefers-reduced-motion: reduce) {
     .bit, #hole.pop { animation: none; }
   }
-  .dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
-         border-radius: 50%; opacity: .8; }
-  .dot.w { background: #00e676; }
-  .dot.h { background: #ffd54f; }
-  /* scored, but the screen never told us exactly where. shown mid board. */
-  .dot.u { background: rgba(0,230,118,.18); border: 2px dashed #00e676; }
-  #live { position: fixed; width: 44px; height: 44px; margin: -22px 0 0 -22px;
-          border: 3px solid #fff; border-radius: 50%; z-index: 2;
+  /* filled duck canvas, slumped where it landed */
+  .dot { position: absolute; width: 38px; height: 33px; margin: -17px 0 0 -19px;
+         border-radius: 9px;
+         box-shadow: 0 3px 6px -1px rgba(0,0,0,.6), inset 0 -4px 8px rgba(0,0,0,.28),
+                     inset 0 3px 6px rgba(255,255,255,.16); }
+  /* the seam stitched round the edge */
+  .dot::after { content: ""; position: absolute; inset: 4px; border-radius: 6px;
+                border: 1px dashed rgba(255,255,255,.42); }
+  .dot.w { background: linear-gradient(158deg, #6cb8ff, #2a7fd4); }
+  .dot.h { background: linear-gradient(158deg, #ffc06a, #d97a1c); }
+  /* fell through, so it sits low and in shadow */
+  .dot.in { width: 30px; height: 26px; margin: -13px 0 0 -15px; filter: brightness(.5) saturate(.8); }
+  /* scored, but the screen never told us exactly where */
+  .dot.u { background: repeating-linear-gradient(45deg, rgba(150,170,190,.20) 0 5px,
+                                                        rgba(150,170,190,.06) 5px 10px);
+           box-shadow: none; }
+  .dot.u::after { border-style: dashed; border-color: rgba(190,205,220,.55); }
+  #live { position: fixed; width: 44px; height: 38px; margin: -19px 0 0 -22px;
+          border: 2px dashed rgba(255,255,255,.9); border-radius: 10px; z-index: 2;
           pointer-events: none; display: none; }
-    .dot.last { box-shadow: 0 0 0 3px #fff; opacity: 1; }
+    .dot.last { outline: 2px solid rgba(255,255,255,.85); outline-offset: 2px; }
 
   #big { position: fixed; inset: 0; z-index: 2; display: flex;
          align-items: center; justify-content: center;
@@ -75,23 +115,30 @@
   #big.on { opacity: .93; }
   #hud { position: fixed; top: calc(1.2vh + env(safe-area-inset-top)); left: 0; right: 0;
          text-align: center; z-index: 3; color: #8d97a3; line-height: 1.05; }
-  #scores { display: flex; gap: 10px; justify-content: center; }
-  .pl { flex: 0 0 40%; padding: 5px 8px 6px; border-radius: 10px;
-        border: 1px solid #262e36; background: rgba(20,24,29,.6); }
-  .pl b { display: block; font: 700 10px -apple-system, system-ui, sans-serif;
-          color: #6a7480; letter-spacing: .02em; }
-  .pl span { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em;
-             color: #7f8a96; font-variant-numeric: tabular-nums;
-             transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease; }
-  .pl.on { border-color: #2f6b4a; background: rgba(0,200,83,.10); }
-  .pl.on b { color: #6ee7a8; }
-  .pl.on span { color: #eef4f8; }
-  .pl.bump span { transform: scale(1.25); color: #ffd54f; }
+  #scores { display: flex; align-items: stretch; justify-content: center; gap: 8px; }
+  #vs { align-self: center; font: 800 11px -apple-system, system-ui, sans-serif;
+        color: #47525e; letter-spacing: .08em; }
+  .pl { flex: 1 1 0; max-width: 42%; padding: 7px 8px 8px; border-radius: 12px;
+        border: 1.5px solid #232a32; background: rgba(18,22,27,.65);
+        transition: border-color .2s ease, background .2s ease, opacity .2s ease;
+        opacity: .5; }
+  .pl b { display: block; font: 800 10px -apple-system, system-ui, sans-serif;
+          letter-spacing: .04em; text-transform: uppercase; }
+  .pl .n { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.035em;
+           color: #eef4f8; font-variant-numeric: tabular-nums; line-height: 1.05;
+           transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease; }
+  .pl .pips { display: flex; gap: 5px; justify-content: center; height: 9px; margin-top: 5px; }
+  .pl .pips i { width: 9px; height: 9px; border-radius: 2px; }
+  /* each player keeps their own colour whether or not it is their turn */
+  #p0 b { color: #5aa9ff; }
+  #p1 b { color: #ff9d42; }
+  #p0.on { opacity: 1; border-color: #2f6ea8; background: rgba(74,163,255,.13); }
+  #p1.on { opacity: 1; border-color: #a86a2a; background: rgba(255,157,66,.13); }
+  #p0 .pips i { background: #5aa9ff; }
+  #p1 .pips i { background: #ff9d42; }
+  .pl .pips i.used { background: transparent; box-shadow: inset 0 0 0 1.5px #4a5561; }
+  .pl.bump .n { transform: scale(1.25); color: #ffd54f; }
   #ptsSub { display: block; font-size: 12px; font-weight: 600; margin-top: 3px; }
-  #bags { display: flex; gap: 6px; justify-content: center; margin-top: 7px; }
-  #bags i { width: 11px; height: 11px; border-radius: 3px; background: #e8edf2;
-            transition: background .2s ease, opacity .2s ease; }
-  #bags i.used { background: transparent; box-shadow: inset 0 0 0 2px #46525f; opacity: .8; }
   #why { position: fixed; bottom: calc(3.5vh + env(safe-area-inset-bottom)); left: 0; right: 0;
          text-align: center; z-index: 3; padding: 0 20px; color: #e8e8e8;
          font: 600 16px/1.35 -apple-system, system-ui, sans-serif; }
@@ -116,8 +163,7 @@
   #dismiss { width: 22px; height: 22px; flex: none; border-radius: 50%;
              background: #2b333d; color: #8d97a3; border: 0; font-size: 13px; line-height: 1; }
   /* readable on the dark board and on the green, amber and red verdict flashes */
-  /* pointer-events stays off so the tap reaches the same handler that arms it */
-  #start { position: fixed; inset: 0; z-index: 6; pointer-events: none;
+  #start { position: fixed; inset: 0; z-index: 6;
            display: flex; flex-direction: column; align-items: center; justify-content: center;
            gap: 22px; padding: 0 30px; text-align: center;
            background: radial-gradient(120% 80% at 50% 38%, #16202b 0%, #0b0e12 70%); }
@@ -126,10 +172,22 @@
               letter-spacing: -.035em; color: #f2f6fa; }
   #start p  { margin: 0; max-width: 22ch; color: #8b96a3;
               font: 500 15px/1.5 -apple-system, system-ui, sans-serif; }
-  #start .tap { margin-top: 10px; padding: 15px 30px; border-radius: 999px;
+  #start .tap { margin-top: 10px; padding: 15px 32px; border-radius: 999px;
                 border: 2px solid #2f9e6b; color: #6ee7a8; background: rgba(0,200,83,.09);
                 font: 700 18px -apple-system, system-ui, sans-serif;
                 animation: breathe 2.4s ease-in-out infinite; }
+  #modes { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; }
+  #modes button { display: flex; align-items: center; gap: 14px;
+                  padding: 14px 18px; border-radius: 14px; text-align: left;
+                  border: 1.5px solid #2a333d; background: rgba(22,27,33,.9);
+                  color: #eef4f8; font: 800 18px -apple-system, system-ui, sans-serif; }
+  #modes button svg { flex: none; width: 40px; height: 30px; }
+  #modes button span { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; }
+  #m1 { border-color: #2f6ea8; } #m1 span { color: #5aa9ff; }
+  #m2 { border-color: #a86a2a; } #m2 span { color: #ff9d42; }
+  .hide { display: none !important; }
+  #scores.solo #p1, #scores.solo #vs { display: none; }
+  #scores.solo .pl { max-width: 60%; }
   #start small { color: #5d6875; font: 500 12px -apple-system, system-ui, sans-serif; }
   @keyframes breathe {
     0%,100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,200,83,.30); }
@@ -150,19 +208,24 @@
   <div id="live"></div>
   <div id="burst"></div>
   <div id="start">
-    <h1 id="startTitle">Packet<br>Cornhole</h1>
+    <h1 id="startTitle">Pocket<br>Cornhole</h1>
     <p id="startBody">Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
-    <div class="tap" id="startTap">Tap anywhere to start</div>
+        <div id="modes">
+      <button id="m1"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="20" cy="9" r="5.4" fill="#5aa9ff"/><path d="M9.5 27c0-5.8 4.7-9.5 10.5-9.5S30.5 21.2 30.5 27z" fill="#5aa9ff"/></svg><div>Practice<span>one player</span></div></button>
+      <button id="m2"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="12" cy="10" r="4.8" fill="#5aa9ff"/><path d="M2.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#5aa9ff"/><circle cx="28" cy="10" r="4.8" fill="#ff9d42"/><path d="M18.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#ff9d42"/></svg><div>Head to head<span>two players</span></div></button>
+    </div>
+    <button class="tap hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
   </div>
-  <div id="build">b37</div>
+  <div id="build">b43</div>
   <div id="big"></div>
     <div id="hud">
     <div id="scores">
-      <div class="pl" id="p0"><b>Player 1</b><span>0</span></div>
-      <div class="pl" id="p1"><b>Player 2</b><span>0</span></div>
+      <div class="pl" id="p0"><b>Player 1</b><span class="n">0</span><span class="pips"></span></div>
+      <div id="vs">VS</div>
+      <div class="pl" id="p1"><b>Player 2</b><span class="n">0</span><span class="pips"></span></div>
     </div>
-    <span id="bags"></span><span id="ptsSub"></span>
+    <span id="ptsSub"></span>
   </div>
   <div id="why"></div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
@@ -196,7 +259,7 @@ var firstContactAt = 0, liftAt = 0;
 var BRIEF_MS = 300;     // a bounce brushes the glass, it does not rest on it
 var points = 0, firstPx = null, lastPx = null;
 var BAGS = 4, bagsLeft = BAGS, frame = 1, frameStart = 0;
-var scores = [0, 0], turn = 0, paused = false;
+var scores = [0, 0], turn = 0, paused = false, players = 1;
 var impactZ = 1;          // how much of the hit went straight down through the glass
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
@@ -218,14 +281,34 @@ function beep(f, ms){
   g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + ms/1000);
   o.stop(ctx.currentTime + ms/1000);
 }
+/* A miss should feel like one. Low sawtooth blast, a shove, and a long buzz. */
+function boo(){
+  if (ctx) {
+    [[150, 0, 260], [110, 190, 420]].forEach(function(n){
+      setTimeout(function(){
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "sawtooth"; o.frequency.value = n[0]; g.gain.value = .3;
+        o.connect(g); g.connect(ctx.destination); o.start();
+        o.frequency.exponentialRampToValueAtTime(n[0] * 0.55, ctx.currentTime + n[2] / 1000);
+        g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + n[2] / 1000);
+        o.stop(ctx.currentTime + n[2] / 1000);
+      }, n[1]);
+    });
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate([260, 90, 260]);
+    deafUntil = performance.now() + 900;
+  }
+}
+
 function celebrate(){
   var W = innerWidth, H = innerHeight;
   var cx = W * 0.5, cy = H * 0.33;
   var cols = ["#ffd54f", "#ffffff", "#00e676", "#ffab40"];
   var frag = document.createDocumentFragment();
-  for (var i = 0; i < 22; i++) {
-    var a = (Math.PI * 2 * i) / 22 + Math.random() * 0.3;
-    var dist = 90 + Math.random() * 150;
+  for (var i = 0; i < 44; i++) {
+    var a = (Math.PI * 2 * i) / 44 + Math.random() * 0.35;
+    var dist = 110 + Math.random() * 240;
     var b = document.createElement("div");
     b.className = "bit";
     b.style.left = cx + "px"; b.style.top = cy + "px";
@@ -242,12 +325,12 @@ function celebrate(){
   $("hole").classList.add("pop");
   setTimeout(function(){ $("hole").classList.remove("pop"); }, 560);
 
-  [[660,0],[880,110],[1320,220],[1760,340]].forEach(function(n){
-    setTimeout(function(){ beep(n[0], 200); }, n[1]);
+  [[523,0],[659,90],[784,180],[1047,270],[1319,380],[1568,500]].forEach(function(n){
+    setTimeout(function(){ beep(n[0], 240); }, n[1]);
   });
   if (navigator.vibrate) {
-    navigator.vibrate([70,50,70,50,150]);
-    deafUntil = performance.now() + 700;   // do not hear our own party
+    navigator.vibrate([90,50,90,50,90,50,260]);
+    deafUntil = performance.now() + 1100;   // do not hear our own party
   }
 }
 
@@ -282,15 +365,19 @@ function zone(p){
   return "the " + (v && h ? v + " " + h : v || h);
 }
 function hud(){
-  $("p0").querySelector("span").textContent = scores[0];
-  $("p1").querySelector("span").textContent = scores[1];
-  $("p0").classList.toggle("on", turn === 0 && !paused);
-  $("p1").classList.toggle("on", turn === 1 && !paused);
   var pips = "";
-  for (var i = 0; i < BAGS; i++) pips += '<i class="' + (i < BAGS - bagsLeft ? "used" : "") + '"></i>';
-  $("bags").innerHTML = pips;
-  $("ptsSub").textContent = "round " + frame + " \u00b7 " +
-    (bagsLeft === 1 ? "1 bag left" : bagsLeft + " bags left");
+  for (var i = 0; i < BAGS; i++)
+    pips += '<i class="' + (i < BAGS - bagsLeft ? "used" : "") + '"></i>';
+  [0, 1].forEach(function(n){
+    var el = $("p" + n), active = (turn === n && !paused);
+    el.querySelector(".n").textContent = scores[n];
+    el.querySelector(".pips").innerHTML = active ? pips : "";
+    el.classList.toggle("on", active);
+  });
+  $("ptsSub").textContent = paused
+    ? "round " + frame
+    : "Player " + (turn + 1) + " throwing \u00b7 round " + frame + " \u00b7 " +
+      (bagsLeft === 1 ? "1 bag left" : bagsLeft + " bags left");
 }
 function bumpScore(){
   var el = $("p" + turn);
@@ -334,20 +421,41 @@ function endFrame(){
   beep(520, 120); setTimeout(function(){ beep(780, 200); }, 130);
 
   paused = true;
-  turn = 1 - turn;
-  if (turn === 0) frame++;
+  if (players === 2) { turn = 1 - turn; if (turn === 0) frame++; }
+  else frame++;
   bagsLeft = BAGS; frameStart = points;
   hud();
 
-  $("startTitle").innerHTML = "Player " + (turn + 1) + "<br>you're up";
-  $("startBody").textContent = "Player " + (who + 1) + " scored " +
-    (got === 0 ? "nothing that round." : got + (got === 1 ? " point." : " points."));
-  $("startTap").textContent = "Tap anywhere when ready";
+  $("startTitle").innerHTML = players === 2
+    ? "Player " + (turn + 1) + "<br>you're up"
+    : "Round " + frame;
+  $("startBody").textContent = players === 2
+    ? "Player " + (who + 1) + " scored " +
+      (got === 0 ? "nothing that round." : got + (got === 1 ? " point." : " points.")) 
+    : (got === 0 ? "No points that round." : got + (got === 1 ? " point" : " points") +
+       " from four bags. " + scores[0] + " in total.");
+  $("modes").classList.add("hide");
+  $("startTap").classList.remove("hide");
+  $("startTap").textContent = "Tap when ready";
   $("startFoot").textContent = "Collect the bags first, then hands off the phone.";
   setTimeout(function(){
     $("dots").innerHTML = ""; lastDot = null;
     $("start").classList.remove("gone");
   }, 900);
+}
+
+function startGame(n){
+  players = n;
+  armed = true;
+  $("scores").classList.toggle("solo", players === 1);
+  try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
+  startMotion();
+  goFullscreen();
+  $("start").classList.add("gone");
+  deafUntil = performance.now() + ARM_QUIET;
+  lastTouchStart = performance.now();
+  idle();
+  if (!navigator.vibrate) $("why").textContent = "no vibrate api on this browser";
 }
 
 function idle(){
@@ -384,7 +492,8 @@ function placeBag(px, pos){
   if (where === "outside") return;
   pendingDot.style.left = pos.x + "%";
   pendingDot.style.top  = pos.y + "%";
-  pendingDot.className = "dot last " + (where === "hole" ? "h" : "w");
+  pendingDot.className = "dot last " + (turn === 0 ? "w" : "h") + (where === "hole" ? " in" : "");
+  pendingDot.style.transform = "rotate(" + (Math.random() * 34 - 17).toFixed(1) + "deg)";
   pendingDot = null; pendingUntil = 0;
 
   /* It was scored as one point because we did not know where it sat. Now we
@@ -403,7 +512,9 @@ function plot(p, inHole, unknown){
   if (!p) return;
   if (lastDot) lastDot.classList.remove("last");
   var d = document.createElement("div");
-  d.className = "dot last " + (unknown ? "u" : inHole ? "h" : "w");
+  /* blue bags for player one, orange for player two, whichever board they land on */
+  d.className = "dot last " + (unknown ? "u" : turn === 0 ? "w" : "h") + (inHole ? " in" : "");
+  d.style.transform = "rotate(" + (Math.random() * 34 - 17).toFixed(1) + "deg)";
   d.style.left = p.x + "%"; d.style.top = p.y + "%";
   $("dots").appendChild(d);
   lastDot = d;
@@ -511,9 +622,10 @@ function verdict(){
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
     points += got; scores[turn] += got;
     if (got > 0) bumpScore();
-    document.body.className = got === 3 ? "three" : "win";
-    $("big").textContent = got === 3 ? "3!" : String(got);
-    if (got === 3) celebrate();
+    document.body.className = got === 3 ? "three" : got === 0 ? "lose" : "win";
+    $("big").textContent = got === 3 ? "CORNHOLE" : got === 0 ? "MISS" : String(got);
+    $("big").classList.toggle("huge", got === 3 || got === 0);
+    if (got === 3) celebrate(); else if (got === 0) boo();
     /* a dot is a bag resting on the board, so only a scoring one earns it,
        and only when the screen actually told us where it came down */
     /* every point puts a bag on the board. if the screen never gave us a spot,
@@ -536,7 +648,9 @@ function verdict(){
                             : "On the board in " + zone(firstPos) + ".";
   } else {
     document.body.className = "lose";
-    $("big").textContent = "0";
+    $("big").textContent = "MISS";
+    $("big").classList.add("huge");
+    boo();
     appealUntil = performance.now() + APPEAL_MS;
     $("why").textContent = flewOff
       ? "Touched " + zone(firstPos) + ", then landed somewhere else. Bounced off."
@@ -546,7 +660,7 @@ function verdict(){
   }
   $("big").classList.add("on");
   hud();
-  if (!(on && document.body.className === "three")) beep(on ? 760 : 200, 100);
+  if (on && document.body.className === "win") beep(760, 100);
   bagsLeft--;
   hud();
   if (bagsLeft <= 0) rt(endFrame, 1700); else rt(idle, 1500);
@@ -608,28 +722,8 @@ function contact(t){
   lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start")) return;
   e.preventDefault();
-  if (paused) {
-    paused = false;
-    $("start").classList.add("gone");
-    deafUntil = performance.now() + ARM_QUIET;
-    lastTouchStart = performance.now();
-    idle();
-    return;
-  }
-  if (!armed) {
-    armed = true;
-    try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
-    startMotion();
-    goFullscreen();
-    $("start").classList.add("gone");
-    /* quiet for a moment so your finger leaving the glass is not a throw */
-    deafUntil = performance.now() + ARM_QUIET;
-    idle();
-    if (!navigator.vibrate) $("why").textContent = "no vibrate api on this browser";
-    return;
-  }
   down = e.touches.length;
   if (!waiting) lastTouchStart = performance.now();
   var t0 = e.changedTouches[0];
@@ -637,7 +731,7 @@ document.addEventListener("touchstart", function(e){
   contact(t0);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start")) return;
   e.preventDefault();
   var t = e.changedTouches[0];
   if (touchOrigin) {
@@ -647,7 +741,7 @@ document.addEventListener("touchmove", function(e){
   if (waiting) contact(t);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start")) return;
   e.preventDefault();
   down = e.touches.length;
   /* A packet being lifted drags across the glass on the way up, and that jolt
@@ -696,12 +790,29 @@ function goFullscreen(){
 }
 checkChrome();
 
+function resume(){
+  paused = false;
+  $("start").classList.add("gone");
+  deafUntil = performance.now() + ARM_QUIET;
+  lastTouchStart = performance.now();
+  idle();
+}
+$("m1").addEventListener("click", function(e){ e.stopPropagation(); startGame(1); });
+$("m2").addEventListener("click", function(e){ e.stopPropagation(); startGame(2); });
+$("startTap").addEventListener("click", function(e){ e.stopPropagation(); resume(); });
+
 $("clear").addEventListener("click", function(e){
   e.stopPropagation();
   goFullscreen();
   $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0;
   frame = 1; bagsLeft = BAGS; frameStart = 0;
-  scores = [0, 0]; turn = 0;
+  scores = [0, 0]; turn = 0; paused = false;
+  $("startTitle").innerHTML = "Pocket<br>Cornhole";
+  $("startBody").textContent = "Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.";
+  $("startFoot").textContent = "Then hands off the phone for a moment.";
+  $("modes").classList.remove("hide");
+  $("startTap").classList.add("hide");
+  $("start").classList.remove("gone");
   wins = 0; plays = 0; points = 0; hud();
   $("why").textContent = "";
 });
