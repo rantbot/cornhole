@@ -118,7 +118,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b22</div>
+  <div id="build">b23</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -371,9 +371,10 @@ function verdict(){
      it left. The cutoff is now only a tiebreaker, not the main test. */
   var certain = down > 0 || (lastContact && lastContact - roundT0 >= LATE_FROM);
   var guessed = !lastContact && !flewOff;
-  /* The screen feeling the packet is direct evidence. A second thump is only
-     an inference, so it decides nothing when the screen has already spoken. */
-  var on = lastContact > 0 || !flewOff;
+  /* Held at the end, or felt late once the buzzing has started, is proof it is
+     sitting there. A brief touch at the moment of impact and nothing after is
+     what a bounce looks like, so that is the only case the thump decides. */
+  var on = certain || !flewOff;
   var slid = firstPos && lastPos &&
              Math.hypot(lastPos.x - firstPos.x, lastPos.y - firstPos.y) > 12;
 
@@ -402,9 +403,9 @@ function verdict(){
     $("big").textContent = "0";
     appealUntil = performance.now() + APPEAL_MS;
     $("why").textContent = flewOff
-      ? "Hit at " + impactMag.toFixed(2) + ", then landed somewhere else at " + secondHit.toFixed(2) + "."
+      ? "Touched " + zone(firstPos) + ", then landed somewhere else. Bounced off."
       : slid ? "Hit " + zone(firstPos) + ", slid off the edge."
-             : "Hit " + zone(firstPos) + ", then went quiet.";
+             : "Touched " + zone(firstPos) + " and was gone. Bounced off.";
   }
   $("big").classList.add("on");
   hud();
