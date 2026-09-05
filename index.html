@@ -109,9 +109,11 @@
   #install b { font-weight: 600; color: #aab4c0; }
   #dismiss { width: 22px; height: 22px; flex: none; border-radius: 50%;
              background: #2b333d; color: #8d97a3; border: 0; font-size: 13px; line-height: 1; }
-  #build { position: fixed; right: 6px; bottom: calc(4px + env(safe-area-inset-bottom));
-           z-index: 3; pointer-events: none; color: #3a4550;
-           font: 500 9px ui-monospace, Menlo, monospace; }
+  /* readable on the dark board and on the green, amber and red verdict flashes */
+  #build { position: fixed; right: 7px; bottom: calc(6px + env(safe-area-inset-bottom));
+           z-index: 5; pointer-events: none; padding: 3px 7px; border-radius: 6px;
+           background: rgba(0,0,0,.42); color: #b9c4cf;
+           font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: .02em; }
 </style>
 </head>
 <body>
@@ -121,7 +123,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b27</div>
+  <div id="build">b28</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
