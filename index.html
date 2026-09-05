@@ -56,7 +56,7 @@
     --t-xs: 13px; --t-sm: 15px; --t-md: 17px;
     --t-lg: 26px; --t-xl: 46px; --t-2xl: 44px;
 
-    --rail-h: 17%;
+    --rail-h: 19%;
     --foot-h: 14%;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -159,7 +159,7 @@
   .dot.w  { background: linear-gradient(155deg, var(--p1-lit), var(--p1-dark)); }
   .dot.h  { background: linear-gradient(155deg, var(--p2-lit), var(--p2-dark)); }
   .dot.in { width: 31px; height: 27px; margin: -13px 0 0 -15px;
-            filter: brightness(.46) saturate(.75); z-index: 0; }
+            filter: brightness(.68) saturate(.85); z-index: 0; }
   .dot.u  { background: repeating-linear-gradient(45deg,
               rgba(244,239,228,.22) 0 5px, rgba(244,239,228,.07) 5px 10px);
             box-shadow: none; }
@@ -199,14 +199,14 @@
         box-shadow: 0 0 10px var(--turn); }
   .pl {
     position: relative; overflow: hidden; pointer-events: auto;
-    flex: 1 1 0; max-width: 44%; padding: 7px 13px 8px; border-radius: var(--r-sm);
+    flex: 1 1 0; max-width: 46%; padding: 7px 11px 9px; border-radius: var(--r-sm);
     background: #050D14; border: 1.5px solid #1F2C38;
     box-shadow: inset 0 2px 7px rgba(0,0,0,.9);
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 5px;
     opacity: .55; transition: opacity .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
-  .pl .who { display: flex; flex-direction: column; align-items: flex-start;
-             gap: 1px; min-width: 0; }
+  .pl .who { display: flex; align-items: baseline; justify-content: space-between;
+             gap: 8px; min-width: 0; }
   .pl b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
           font-size: var(--t-sm); font-weight: 800; letter-spacing: .01em; line-height: 1.1;
           padding-bottom: 1px; border-bottom: 1px dashed rgba(244,239,228,.35); }
@@ -220,7 +220,10 @@
     font-variant-numeric: tabular-nums; color: var(--chalk);
     transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease;
   }
-  .pl.on .pips i { box-shadow: 0 0 8px currentColor; }
+  .pl.on .pips i { box-shadow: inset 0 -3px 5px rgba(0,0,0,.3),
+                               inset 0 2px 4px rgba(255,255,255,.22),
+                               0 0 12px currentColor; }
+  .pl.on .pips i.used { box-shadow: inset 0 0 0 2px rgba(244,239,228,.22); }
   /* the scanlines of a cheap arcade readout */
   .pl::after { content: ""; position: absolute; inset: 0; pointer-events: none;
                background: repeating-linear-gradient(180deg,
@@ -234,8 +237,15 @@
   #p0.on .n { text-shadow: 0 0 8px var(--p1-lit), 0 0 26px rgba(47,127,201,.9); }
   #p1.on .n { text-shadow: 0 0 8px var(--p2-lit), 0 0 26px rgba(210,98,28,.9); }
   .pl.bump .n { transform: scale(1.3); color: var(--gold); }
-  .pl .pips { display: flex; gap: 5px; align-self: center; }
-  .pl .pips i { width: 15px; height: 12px; border-radius: var(--r-xs); }
+  /* four bags, drawn the size they are worth reading from across a room */
+  .pl .pips { display: flex; gap: 6px; }
+  .pl .pips i {
+    flex: 1 1 0; height: 17px; border-radius: var(--r-xs);
+    box-shadow: inset 0 -3px 5px rgba(0,0,0,.3), inset 0 2px 4px rgba(255,255,255,.22);
+    transition: opacity .2s ease;
+  }
+  .pl .pips i.used { background: transparent !important; opacity: 1;
+                     box-shadow: inset 0 0 0 2px rgba(244,239,228,.14); }
   #p0 .pips i { background: var(--p1); color: var(--p1); }
   #p1 .pips i { background: var(--p2); color: var(--p2); }
   .pl .pips i.used { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(244,239,228,.3); }
@@ -259,6 +269,15 @@
     flex: none; min-width: 74px; padding: 14px 12px; border-radius: var(--r-md);
     background: rgba(244,239,228,.10); color: var(--chalk);
     border: 1px solid var(--line-2); font-size: var(--t-sm); font-weight: 700;
+  }
+  /* Nothing is listened for until this is tapped, so collecting a bag can
+     never be mistaken for a throw. */
+  #go {
+    flex: 1 1 auto; align-self: stretch; margin: 9px 0; min-width: 0;
+    border-radius: var(--r-md); border: none; color: #08151F;
+    font-size: 26px; font-weight: 800; letter-spacing: -.02em;
+    box-shadow: 0 0 22px var(--turn-glow), inset 0 -4px 0 rgba(0,0,0,.22);
+    background: var(--turn-lit);
   }
   #why {
     flex: 1 1 auto; min-width: 0; text-align: center;
@@ -499,7 +518,7 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b65</div>
+    <div id="build">b68</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -513,6 +532,7 @@
   <div id="foot">
     <button id="clear">Exit</button>
     <div id="why"></div>
+    <button id="go" class="hide">Ready</button>
     <button id="gear">Settings</button>
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
@@ -606,15 +626,17 @@ var impactZ = 1;          // how much of the hit went straight down through the 
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
 var appealUntil = 0;      // a lost round can still be put right if it turns up
-var editing = false, gameOver = false, silenced = false;
+var editing = false, gameOver = false, silenced = false, ready = false;
 var touchOrigin = null, touchMoved = 0;   // telling a pickup from a quiet drop
 var lastTouchStart = -1e9;                // when something newly arrived on the glass
 var HAND_WINDOW = 1400;                   // a contact this fresh, still down, is a hand
 var pendingDot = null, pendingUntil = 0;  // a bag placed before we knew its spot
 var PENDING_MS = 8000;
-var PICKUP_PX  = 14;      // a lifted packet drags this far, a dropped one does not
 var PICKUP_TAIL = 900;    // stay deaf that long after a hand has been on the glass
-var DRAG_PX = 45, DRAG_MS = 260;   // a hand drags far and slowly, a skid does not
+/* The round buzzes the phone six times to shake the bag into view, and that
+   jiggle drifts the contact a little each time. A hand pulling a bag off the
+   board covers real ground, so the bar has to sit well above the jiggle. */
+var DRAG_FRAC = 0.30, DRAG_MS = 500;
 var contactAt = 0, pickedUp = false;
 var APPEAL_MS = 5000;
 
@@ -695,7 +717,7 @@ function clearRound(){ timers.forEach(clearTimeout); timers = []; clearInterval(
 /* These match the rails in the stylesheet. The top rail ends at 15% and the
    bottom one starts at 88%, so the wood between them is the scoring board and
    the chrome costs no play surface. */
-var RAIL_TOP = 0.16, RAIL_BOT = 0.86, EDGE = 0.05;
+var RAIL_TOP = 0.20, RAIL_BOT = 0.85, EDGE = 0.05;
 function target(px){
   if (!px) return "unknown";
   var W = innerWidth, H = innerHeight;
@@ -858,6 +880,12 @@ function startGame(n){
 function idle(){
   waiting = false; clearRound();
   $("why").className = "";
+  var gate = armed && !paused && !gameOver;
+  $("go").classList.toggle("hide", !gate);
+  $("why").classList.toggle("hide", gate);
+  if (gate) {
+    $("go").textContent = players === 2 ? name(turn) + " \u00b7 ready" : "Ready";
+  }
   if (!paused && armed) {
     if (players === 2) {
       $("why").textContent = name(turn);
@@ -995,7 +1023,7 @@ function knockAbout(hit){
 /* ---- round ---- */
 function onImpact(m, zShare){
   var t = performance.now();
-  if (editing || paused || waiting || t < deafUntil || t - lastImpact < 900) return;
+  if (!ready || editing || paused || waiting || t < deafUntil || t - lastImpact < 900) return;
   /* A thrown bag jolts the phone first and touches second. A hand reaching in
      touches first. So a contact that arrived just before this jolt, and is
      still on the glass, means you are picking a bag up rather than landing one.
@@ -1249,10 +1277,8 @@ document.addEventListener("touchmove", function(e){
   if (touchOrigin) {
     var d = Math.hypot(t.clientX - touchOrigin.x, t.clientY - touchOrigin.y);
     if (d > touchMoved) touchMoved = d;
-    /* A bag skidding on landing travels a little and is done in a moment.
-       Being dragged off the board goes much further and takes much longer. */
-    if (waiting && touchMoved > DRAG_PX && performance.now() - contactAt > DRAG_MS)
-      pickedUp = true;
+    if (waiting && touchMoved > innerWidth * DRAG_FRAC
+        && performance.now() - contactAt > DRAG_MS) pickedUp = true;
   }
   if (waiting) contact(t);
 }, {passive:false});
@@ -1264,7 +1290,7 @@ function lift(e){
      would otherwise open a fresh round and score the same bag twice. A packet
      the screen simply lost never moves, so it does not blind anything. */
   if (down === 0 && waiting) liftAt = performance.now();
-  if (down === 0 && touchMoved > PICKUP_PX) {
+  if (down === 0 && touchMoved > innerWidth * 0.12) {
     deafUntil = Math.max(deafUntil, performance.now() + PICKUP_TAIL);
     appealUntil = 0;
   }
@@ -1307,7 +1333,7 @@ function goFullscreen(){
 checkChrome();
 
 function resume(){
-  silenced = false;
+  silenced = false; ready = false;
   if (gameOver) {
     gameOver = false;
     scores = [0, 0]; inning = [0, 0]; onBoard = [];
@@ -1457,6 +1483,18 @@ $("renameDone").addEventListener("click", function(e){ e.stopPropagation(); clos
 $("renameInput").addEventListener("keydown", function(e){ if (e.key === "Enter") closeRename(); });
 $("renameInput").addEventListener("click", function(e){ e.stopPropagation(); });
 
+$("go").addEventListener("click", function(e){
+  e.stopPropagation();
+  ready = true;
+  /* your finger leaving the glass is a bigger jolt than any packet */
+  deafUntil = performance.now() + 1100;
+  lastTouchStart = performance.now();
+  $("go").classList.add("hide");
+  $("why").classList.remove("hide");
+  $("why").className = players === 2 ? "t" + turn : "";
+  $("why").textContent = players === 2 ? name(turn) + ", throw" : "Throw";
+  beep(1250, 60);
+});
 $("gear").addEventListener("click", function(e){
   e.stopPropagation(); paintSwatches(); $("settings").classList.add("on");
 });
@@ -1470,7 +1508,7 @@ function exitGame(){
   /* Tear the round down, not just the screen. Otherwise its timers keep
      firing behind the start card and you hear a game you already left. */
   silenced = true;
-  waiting = false; editing = false;
+  waiting = false; editing = false; ready = false;
   clearRound();
   if (navigator.vibrate) navigator.vibrate(0);
   document.body.className = "";
