@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>which sensor works</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #888;
+    font: 700 18px -apple-system, system-ui, sans-serif;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none; }
+  #num { position: fixed; top: env(safe-area-inset-top); left: 0; right: 0; padding: 10px 0;
+         text-align: center; font: 400 14px ui-monospace, Menlo, monospace; color: #999; z-index: 3; }
+  #cells { position: fixed; inset: 0; display: flex; flex-direction: column; }
+  .cell { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          border-bottom: 1px solid #222; transition: background .05s linear; }
+  .cell .n { font-size: 13vw; font-weight: 800; letter-spacing: -.03em; }
+  .cell .c { font-size: 9vw; font-weight: 800; margin-top: 2vh; opacity: .9; }
+  #cImpact { background: #111; color: #555; }
+  #cImpact.hot { background: #ffd600; color: #000; }
+  #cTouch  { background: #111; color: #555; }
+  #cTouch.hot { background: #00c853; color: #000; }
+  #bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 4; display: flex; gap: 1px; background: #333; }
+  #bar button { flex: 1; padding: 13px 0 calc(13px + env(safe-area-inset-bottom));
+                background: #1a1a1a; color: #999; border: 0; font: 600 14px system-ui, sans-serif; }
+</style>
+</head>
+<body>
+  <div id="num">tap anywhere to start</div>
+  <div id="cells">
+    <div class="cell" id="cImpact"><div class="n">IMPACT</div><div class="c" id="nImpact">0</div></div>
+    <div class="cell" id="cTouch"><div class="n">TOUCH</div><div class="c" id="nTouch">0</div></div>
+  </div>
+  <div id="bar">
+    <button id="bDown">lower trigger</button>
+    <button id="bBuzz">buzz</button>
+    <button id="bZero">zero counts</button>
+  </div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(i){ return document.getElementById(i); };
+var started = false, thr = 0.5, live = 0, peak = 0, nI = 0, nT = 0, src = "none";
+
+function buzz(){ if (navigator.vibrate) navigator.vibrate([45,35,45,35,55]); }
+
+function hitImpact(m){
+  nI++; $("nImpact").textContent = nI;
+  $("cImpact").classList.add("hot");
+  setTimeout(function(){ $("cImpact").classList.remove("hot"); }, 180);
+  buzz();                                  // still buzz, so touch gets its chance
+}
+
+function motion(ax, ay, az){
+  var m = Math.sqrt(ax*ax + ay*ay + az*az);
+  live = m; if (m > peak) peak = m;
+  if (m > thr) hitImpact(m);
+}
+function start(){
+  if (window.LinearAccelerationSensor) {
+    try {
+      var a = new LinearAccelerationSensor({frequency:200});
+      a.onreading = function(){ motion(a.x, a.y, a.z); };
+      a.onerror = function(){ src = "sensor api errored"; dm(); };
+      a.start(); src = "sensor api";
+      return;
+    } catch(e){ src = "sensor api threw"; }
+  }
+  dm();
+}
+function dm(){
+  function bind(){
+    src = "devicemotion";
+    addEventListener("devicemotion", function(e){
+      var a = e.acceleration;
+      if (!a || a.x === null) {
+        src = "devicemotion, no linear accel";
+        a = e.accelerationIncludingGravity;
+        if (!a) { src = "devicemotion gives nothing"; return; }
+        return;                            // gravity-only is not usable here
+      }
+      motion(a.x||0, a.y||0, a.z||0);
+    });
+  }
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission)
+    DeviceMotionEvent.requestPermission()
+      .then(function(r){ if (r === "granted") bind(); else src = "motion denied"; })
+      .catch(function(){ src = "motion prompt failed"; });
+  else bind();
+}
+
+setInterval(function(){
+  if (!started) return;
+  $("num").textContent =
+    "now " + live.toFixed(2) + "   peak " + peak.toFixed(2) +
+    "   trigger " + thr.toFixed(2) + "   " + src;
+  peak *= 0.9;
+}, 150);
+
+document.addEventListener("touchstart", function(e){
+  if (e.target.tagName === "BUTTON") return;
+  e.preventDefault();
+  if (!started) { started = true; start(); return; }
+  nT++; $("nTouch").textContent = nT;
+  $("cTouch").classList.add("hot");
+}, {passive:false});
+
+function up(e){
+  if (e.target.tagName === "BUTTON") return;
+  e.preventDefault();
+  if (e.touches.length === 0) $("cTouch").classList.remove("hot");
+}
+document.addEventListener("touchend", up, {passive:false});
+document.addEventListener("touchcancel", up, {passive:false});
+
+$("bDown").addEventListener("click", function(e){
+  e.stopPropagation(); thr = thr <= 0.06 ? 2 : thr / 2;
+});
+$("bBuzz").addEventListener("click", function(e){ e.stopPropagation(); buzz(); });
+$("bZero").addEventListener("click", function(e){
+  e.stopPropagation(); nI = 0; nT = 0; $("nImpact").textContent = 0; $("nTouch").textContent = 0;
+});
+})();
+</script>
+</body>
+</html>
