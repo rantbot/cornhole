@@ -132,6 +132,27 @@
   }
 
   /* ---------- bags ---------- */
+  /* Screen printed onto the ply. It multiplies against the surface so the grain
+     shows through the ink, and carries a hairline of light along the bottom edge
+     the way a raised layer of paint catches the room. */
+  #logo {
+    position: fixed; left: 0; right: 0; top: 63%; z-index: 1;
+    transition: opacity .2s ease;
+    pointer-events: none; text-align: center; mix-blend-mode: multiply;
+    opacity: .62;
+  }
+  #logo .a, #logo .b { display: block; color: #123048; }
+  #logo .a {
+    font-size: 13px; font-weight: 800; letter-spacing: .46em; text-indent: .46em;
+    text-transform: uppercase; opacity: .8;
+  }
+  #logo .b {
+    margin-top: 1px; font-size: 30px; font-weight: 800; letter-spacing: -.02em;
+    text-transform: uppercase;
+    border-top: 2px solid #123048; border-bottom: 2px solid #123048;
+    padding: 3px 0 4px; display: inline-block;
+    text-shadow: 0 1px 0 rgba(255,244,224,.30);
+  }
   /* your remaining bags, waiting on the near end of the board */
   #ready {
     position: fixed; left: 0; right: 0; bottom: calc(var(--foot-h) + 26px); z-index: 1;
@@ -305,6 +326,7 @@
   body.win    #board { filter: saturate(1.15) brightness(1.10); }
   body.three  #board { filter: saturate(1.30) brightness(1.28); }
   body.lose   #board { filter: saturate(.55) brightness(.72); }
+  body.lose   #logo  { opacity: .38; }
   body.settle #board { filter: brightness(.9); }
 
   body.three #hole { animation: sink 620ms cubic-bezier(.2,1.5,.35,1); }
@@ -519,6 +541,10 @@
   <div id="oob"></div>
   <div id="board"></div>
   <div id="hole"></div>
+  <div id="logo">
+    <span class="a">Pocket</span>
+    <span class="b">Cornhole</span>
+  </div>
   <div id="ready"></div>
   <div id="dots"></div>
   <div id="live"></div>
@@ -545,7 +571,7 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b69</div>
+    <div id="build">b71</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -905,8 +931,11 @@ function startGame(n){
 
 function idle(){
   waiting = false; clearRound();
+  /* Every throw needs its own tap. Without this the gate is answered once and
+     never asked again. */
+  ready = false;
   $("why").className = "";
-  var showGate = armed && !paused && !gameOver && !ready && !waiting;
+  var showGate = armed && !paused && !gameOver;
   $("gate").classList.toggle("on", showGate);
   $("gateWho").textContent = players === 2 ? name(turn) : "Your throw";
   if (!paused && armed) {
