@@ -39,6 +39,25 @@
                  align-items: center; justify-content: center;
                  font: 800 46px -apple-system, system-ui, sans-serif; color: #2b3742; }
   #dots { position: fixed; inset: 0; z-index: 1; }
+  body.three { background: #8a6a00; }
+  #burst { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+  .bit { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+         border-radius: 3px; opacity: 0;
+         animation: fly 900ms cubic-bezier(.15,.7,.3,1) forwards; }
+  @keyframes fly {
+    0%   { opacity: 1; transform: translate(0,0) scale(.5) rotate(0deg); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1) rotate(var(--rot)); }
+  }
+  #hole.pop { animation: pop 520ms cubic-bezier(.2,1.5,.4,1); }
+  @keyframes pop {
+    0%   { transform: translate(-50%,-50%) scale(1); }
+    40%  { transform: translate(-50%,-50%) scale(1.16); }
+    100% { transform: translate(-50%,-50%) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bit, #hole.pop { animation: none; }
+  }
   .dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
          border-radius: 50%; opacity: .8; }
   .dot.w { background: #00e676; }
@@ -56,8 +75,13 @@
          font-size: 21vw; font-weight: 800; letter-spacing: -.04em;
          color: #fff; opacity: 0; transition: opacity .1s linear; }
   #big.on { opacity: .93; }
-  #hud { position: fixed; top: calc(1.4vh + env(safe-area-inset-top)); left: 0; right: 0;
-         text-align: center; z-index: 3; font-size: 15px; color: #aaa; }
+  #hud { position: fixed; top: calc(1.2vh + env(safe-area-inset-top)); left: 0; right: 0;
+         text-align: center; z-index: 3; color: #8d97a3; line-height: 1.05; }
+  #pts { display: block; font-size: 40px; font-weight: 800; letter-spacing: -.03em;
+         color: #e8edf2; font-variant-numeric: tabular-nums;
+         transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease; }
+  #pts.bump { transform: scale(1.28); color: #ffd54f; }
+  #ptsSub { display: block; font-size: 12px; font-weight: 600; margin-top: 1px; }
   #why { position: fixed; bottom: calc(3.5vh + env(safe-area-inset-bottom)); left: 0; right: 0;
          text-align: center; z-index: 3; padding: 0 20px; color: #e8e8e8;
          font: 600 16px/1.35 -apple-system, system-ui, sans-serif; }
@@ -67,15 +91,20 @@
             width: 44px; height: 44px; border-radius: 50%; z-index: 4;
             background: #232323; color: #999; border: 1px solid #383838;
             font: 600 11px -apple-system, system-ui, sans-serif; }
-  #oob { position: fixed; top: 0; left: 0; right: 0; height: 92px; z-index: 0;
-         pointer-events: none; display: none;
-         background: repeating-linear-gradient(45deg,#241010 0 10px,#1a0c0c 10px 20px);
-         border-bottom: 2px solid #7a2222; }
+  /* a hairline where the browser bar sits, nothing more */
+  #oob { position: fixed; top: 0; left: 0; right: 0; height: 1px; z-index: 0;
+         pointer-events: none; display: none; background: #33404d; }
   #oob.on { display: block; }
-  #install { position: fixed; bottom: calc(11vh + env(safe-area-inset-bottom));
-             left: 0; right: 0; text-align: center; z-index: 3; padding: 0 20px;
-             pointer-events: none; color: #f0c674;
-             font: 600 13px/1.4 -apple-system, system-ui, sans-serif; }
+  #install { position: fixed; bottom: calc(6px + env(safe-area-inset-bottom));
+             left: 50%; transform: translateX(-50%); z-index: 3; display: none;
+             max-width: 88%; align-items: center; gap: 8px;
+             padding: 7px 8px 7px 12px; border-radius: 999px;
+             background: rgba(28,32,38,.82); border: 1px solid #2b333d;
+             color: #8d97a3; font: 500 11.5px/1.3 -apple-system, system-ui, sans-serif; }
+  #install.on { display: flex; }
+  #install b { font-weight: 600; color: #aab4c0; }
+  #dismiss { width: 22px; height: 22px; flex: none; border-radius: 50%;
+             background: #2b333d; color: #8d97a3; border: 0; font-size: 13px; line-height: 1; }
   #clear { left: 8px; }
   #miss  { left: 58px; }
   #cut   { right: 8px; }
@@ -88,10 +117,11 @@
   <div id="hole"></div>
   <div id="dots"></div>
   <div id="live"></div>
+  <div id="burst"></div>
   <div id="big"></div>
-  <div id="hud">tap to start</div>
+  <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
-  <div id="install"></div>
+  <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
   <button class="corner" id="clear">clear</button>
   <button class="corner" id="miss">miss<br>off</button>
   <button class="corner" id="trig">.35</button>
@@ -134,6 +164,39 @@ function beep(f, ms){
   g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + ms/1000);
   o.stop(ctx.currentTime + ms/1000);
 }
+function celebrate(){
+  var W = innerWidth, H = innerHeight;
+  var cx = W * 0.5, cy = H * 0.33;
+  var cols = ["#ffd54f", "#ffffff", "#00e676", "#ffab40"];
+  var frag = document.createDocumentFragment();
+  for (var i = 0; i < 22; i++) {
+    var a = (Math.PI * 2 * i) / 22 + Math.random() * 0.3;
+    var dist = 90 + Math.random() * 150;
+    var b = document.createElement("div");
+    b.className = "bit";
+    b.style.left = cx + "px"; b.style.top = cy + "px";
+    b.style.background = cols[i % cols.length];
+    b.style.setProperty("--dx", Math.cos(a) * dist + "px");
+    b.style.setProperty("--dy", Math.sin(a) * dist + "px");
+    b.style.setProperty("--rot", Math.round(Math.random() * 540 - 270) + "deg");
+    b.style.animationDelay = Math.round(Math.random() * 90) + "ms";
+    frag.appendChild(b);
+  }
+  $("burst").appendChild(frag);
+  setTimeout(function(){ $("burst").innerHTML = ""; }, 1200);
+
+  $("hole").classList.add("pop");
+  setTimeout(function(){ $("hole").classList.remove("pop"); }, 560);
+
+  [[660,0],[880,110],[1320,220],[1760,340]].forEach(function(n){
+    setTimeout(function(){ beep(n[0], 200); }, n[1]);
+  });
+  if (navigator.vibrate) {
+    navigator.vibrate([70,50,70,50,150]);
+    deafUntil = performance.now() + 700;   // do not hear our own party
+  }
+}
+
 function shake(){
   if (!navigator.vibrate) return;
   navigator.vibrate([45,35,45,35,45,35,60]);
@@ -165,10 +228,19 @@ function zone(p){
   return "the " + (v && h ? v + " " + h : v || h);
 }
 function hud(){
-  $("hud").textContent = (plays || misses)
-    ? points + " pts / " + (plays + misses) + " thrown"
+  $("pts").textContent = points;
+  $("ptsSub").textContent = (plays || misses)
+    ? (points === 1 ? "point" : "points") + " from " + (plays + misses) + " throws"
     : "throw";
 }
+function bumpScore(){
+  var el = $("pts");
+  el.classList.add("bump");
+  setTimeout(function(){ el.classList.remove("bump"); }, 220);
+}
+
+var dismissed = false;
+try { dismissed = localStorage.getItem("packet-install-dismissed") === "1"; } catch(e){}
 
 function clean(){
   return (window.matchMedia &&
@@ -179,10 +251,12 @@ function clean(){
 function checkChrome(){
   var ok = clean();
   $("oob").classList.toggle("on", !ok);
-  $("install").textContent = ok ? ""
-    : (/iPhone|iPad|iPod/.test(navigator.userAgent)
-        ? "Share, then Add to Home Screen. Open it from that icon for the whole screen."
-        : "Browser menu, then Add to Home Screen. Open it from that icon for the whole screen.");
+  var hide = ok || dismissed;
+  $("install").classList.toggle("on", !hide);
+  if (hide) return;
+  $("installText").innerHTML = /iPhone|iPad|iPod/.test(navigator.userAgent)
+    ? "Share, then <b>Add to Home Screen</b> for the full screen"
+    : "Menu, then <b>Add to Home Screen</b> for the full screen";
 }
 addEventListener("resize", function(){ setTimeout(checkChrome, 120); });
 
@@ -260,19 +334,20 @@ function verdict(){
 
   if (on) {
     wins++;
-    /* in the hole however it got there, landed or slid */
-    var where = guessed ? "unknown"
-      : (target(firstPx) === "hole" || target(lastPx) === "hole") ? "hole"
-      : target(lastPx) === "board" ? "board" : target(firstPx);
+    /* Where it first came down is the truest reading. Anything after that is
+       the packet being nudged by the buzzing, or the screen re-acquiring it a
+       little off, so a win is scored at the point of impact. */
+    var where = guessed ? "unknown" : target(firstPx);
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
     points += got;
-    document.body.className = "win";
-    $("big").textContent = String(got);
+    if (got > 0) bumpScore();
+    document.body.className = got === 3 ? "three" : "win";
+    $("big").textContent = got === 3 ? "3!" : String(got);
+    if (got === 3) celebrate();
     $("why").textContent =
-        where === "hole"    ? (target(firstPx) === "hole" ? "Straight in the hole." : "Slid into the hole.")
+        where === "hole"    ? "In the hole."
       : where === "outside" ? "On the phone but off the board. No points."
       : guessed             ? "Stayed on, though the screen never saw where. One point."
-      : slid                ? "Landed on the board in " + zone(firstPos) + ", settled in " + zone(lastPos) + "."
                             : "On the board in " + zone(firstPos) + ".";
     if (lastDot) lastDot.className = "dot last " + (guessed ? "g" : where === "hole" ? "h" : "w");
   } else {
@@ -285,7 +360,7 @@ function verdict(){
   }
   $("big").classList.add("on");
   hud();
-  beep(on ? 760 : 200, 100);
+  if (!(on && document.body.className === "three")) beep(on ? 760 : 200, 100);
   rt(idle, 1500);
 }
 
@@ -359,7 +434,7 @@ function contact(t){
   lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px"; lv.style.display = "block";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON") return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   if (!armed) {
     armed = true;
@@ -376,12 +451,12 @@ document.addEventListener("touchstart", function(e){
   contact(e.changedTouches[0]);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON") return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   if (waiting) contact(e.changedTouches[0]);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON") return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   down = e.touches.length;
 }
@@ -393,6 +468,17 @@ if ("serviceWorker" in navigator)
   addEventListener("load", function(){
     navigator.serviceWorker.register("./sw.js").catch(function(){});
   });
+
+document.addEventListener("DOMContentLoaded", function(){
+  var b = $("dismiss");
+  if (!b) return;
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    dismissed = true;
+    try { localStorage.setItem("packet-install-dismissed", "1"); } catch(err){}
+    $("install").classList.remove("on");
+  });
+});
 
 function goFullscreen(){
   var el = document.documentElement;
