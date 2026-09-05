@@ -75,10 +75,18 @@
   #big.on { opacity: .93; }
   #hud { position: fixed; top: calc(1.2vh + env(safe-area-inset-top)); left: 0; right: 0;
          text-align: center; z-index: 3; color: #8d97a3; line-height: 1.05; }
-  #pts { display: block; font-size: 40px; font-weight: 800; letter-spacing: -.03em;
-         color: #e8edf2; font-variant-numeric: tabular-nums;
-         transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease; }
-  #pts.bump { transform: scale(1.28); color: #ffd54f; }
+  #scores { display: flex; gap: 10px; justify-content: center; }
+  .pl { flex: 0 0 40%; padding: 5px 8px 6px; border-radius: 10px;
+        border: 1px solid #262e36; background: rgba(20,24,29,.6); }
+  .pl b { display: block; font: 700 10px -apple-system, system-ui, sans-serif;
+          color: #6a7480; letter-spacing: .02em; }
+  .pl span { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em;
+             color: #7f8a96; font-variant-numeric: tabular-nums;
+             transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease; }
+  .pl.on { border-color: #2f6b4a; background: rgba(0,200,83,.10); }
+  .pl.on b { color: #6ee7a8; }
+  .pl.on span { color: #eef4f8; }
+  .pl.bump span { transform: scale(1.25); color: #ffd54f; }
   #ptsSub { display: block; font-size: 12px; font-weight: 600; margin-top: 3px; }
   #bags { display: flex; gap: 6px; justify-content: center; margin-top: 7px; }
   #bags i { width: 11px; height: 11px; border-radius: 3px; background: #e8edf2;
@@ -142,14 +150,20 @@
   <div id="live"></div>
   <div id="burst"></div>
   <div id="start">
-    <h1>Packet<br>Cornhole</h1>
-    <p>Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
-    <div class="tap">Tap anywhere to start</div>
-    <small>Then hands off the phone for a moment.</small>
+    <h1 id="startTitle">Packet<br>Cornhole</h1>
+    <p id="startBody">Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
+    <div class="tap" id="startTap">Tap anywhere to start</div>
+    <small id="startFoot">Then hands off the phone for a moment.</small>
   </div>
-  <div id="build">b35</div>
+  <div id="build">b37</div>
   <div id="big"></div>
-  <div id="hud"><span id="pts">0</span><span id="bags"></span><span id="ptsSub"></span></div>
+    <div id="hud">
+    <div id="scores">
+      <div class="pl" id="p0"><b>Player 1</b><span>0</span></div>
+      <div class="pl" id="p1"><b>Player 2</b><span>0</span></div>
+    </div>
+    <span id="bags"></span><span id="ptsSub"></span>
+  </div>
   <div id="why"></div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
   <button id="clear">clear</button>
@@ -182,6 +196,7 @@ var firstContactAt = 0, liftAt = 0;
 var BRIEF_MS = 300;     // a bounce brushes the glass, it does not rest on it
 var points = 0, firstPx = null, lastPx = null;
 var BAGS = 4, bagsLeft = BAGS, frame = 1, frameStart = 0;
+var scores = [0, 0], turn = 0, paused = false;
 var impactZ = 1;          // how much of the hit went straight down through the glass
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
@@ -267,15 +282,18 @@ function zone(p){
   return "the " + (v && h ? v + " " + h : v || h);
 }
 function hud(){
-  $("pts").textContent = points;
+  $("p0").querySelector("span").textContent = scores[0];
+  $("p1").querySelector("span").textContent = scores[1];
+  $("p0").classList.toggle("on", turn === 0 && !paused);
+  $("p1").classList.toggle("on", turn === 1 && !paused);
   var pips = "";
   for (var i = 0; i < BAGS; i++) pips += '<i class="' + (i < BAGS - bagsLeft ? "used" : "") + '"></i>';
   $("bags").innerHTML = pips;
-  $("ptsSub").textContent = "frame " + frame + " \u00b7 " +
+  $("ptsSub").textContent = "round " + frame + " \u00b7 " +
     (bagsLeft === 1 ? "1 bag left" : bagsLeft + " bags left");
 }
 function bumpScore(){
-  var el = $("pts");
+  var el = $("p" + turn);
   el.classList.add("bump");
   setTimeout(function(){ el.classList.remove("bump"); }, 220);
 }
@@ -303,20 +321,33 @@ addEventListener("resize", function(){ setTimeout(checkChrome, 120); });
 
 /* Four bags to a frame, same as the real thing. Board clears between them and
    the total carries over. */
+/* Four bags, then the other player steps up. The card also keeps the phone
+   safe while you swap places and collect the bags. */
 function endFrame(){
   var got = points - frameStart;
+  var who = turn;
   appealUntil = 0; pendingDot = null;
+  waiting = false; clearRound();
   document.body.className = "";
-  $("big").textContent = String(got);
-  $("big").classList.add("on");
-  $("why").textContent = "Frame " + frame + " done. " +
-    (got === 0 ? "No points that time." : got + (got === 1 ? " point" : " points") + " from four bags.");
+  $("big").classList.remove("on");
+  $("live").style.display = "none";
   beep(520, 120); setTimeout(function(){ beep(780, 200); }, 130);
+
+  paused = true;
+  turn = 1 - turn;
+  if (turn === 0) frame++;
+  bagsLeft = BAGS; frameStart = points;
+  hud();
+
+  $("startTitle").innerHTML = "Player " + (turn + 1) + "<br>you're up";
+  $("startBody").textContent = "Player " + (who + 1) + " scored " +
+    (got === 0 ? "nothing that round." : got + (got === 1 ? " point." : " points."));
+  $("startTap").textContent = "Tap anywhere when ready";
+  $("startFoot").textContent = "Collect the bags first, then hands off the phone.";
   setTimeout(function(){
     $("dots").innerHTML = ""; lastDot = null;
-    frame++; bagsLeft = BAGS; frameStart = points;
-    idle();
-  }, 2200);
+    $("start").classList.remove("gone");
+  }, 900);
 }
 
 function idle(){
@@ -334,7 +365,7 @@ function appeal(px, pos){
   var where = target(px);
   if (where === "outside") return;
   var got = where === "hole" ? 3 : 1;
-  points += got; wins++; bumpScore();
+  points += got; scores[turn] += got; wins++; bumpScore();
   plot(pos, where === "hole");
   document.body.className = where === "hole" ? "three" : "win";
   $("big").textContent = got === 3 ? "3!" : String(got);
@@ -355,9 +386,17 @@ function placeBag(px, pos){
   pendingDot.style.top  = pos.y + "%";
   pendingDot.className = "dot last " + (where === "hole" ? "h" : "w");
   pendingDot = null; pendingUntil = 0;
-  $("why").textContent = "Found the bag. It is " +
-    (where === "hole" ? "in the hole." : "in " + zone(pos) + ".");
-  setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1600);
+
+  /* It was scored as one point because we did not know where it sat. Now we
+     do, and a yellow bag is always worth three, so top it up. */
+  if (where === "hole") {
+    points += 2; scores[turn] += 2;
+    bumpScore(); hud(); celebrate();
+    $("why").textContent = "Found the bag. In the hole, that is 3.";
+  } else {
+    $("why").textContent = "Found the bag. It is in " + zone(pos) + ".";
+  }
+  setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1800);
 }
 
 function plot(p, inHole, unknown){
@@ -373,7 +412,7 @@ function plot(p, inHole, unknown){
 /* ---- round ---- */
 function onImpact(m, zShare){
   var t = performance.now();
-  if (waiting || t < deafUntil || t - lastImpact < 900) return;
+  if (paused || waiting || t < deafUntil || t - lastImpact < 900) return;
   /* A thrown bag jolts the phone first and touches second. A hand reaching in
      touches first. So a contact that arrived just before this jolt, and is
      still on the glass, means you are picking a bag up rather than landing one.
@@ -470,7 +509,7 @@ function verdict(){
        little off, so a win is scored at the point of impact. */
     var where = guessed ? "unknown" : target(firstPx);
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
-    points += got;
+    points += got; scores[turn] += got;
     if (got > 0) bumpScore();
     document.body.className = got === 3 ? "three" : "win";
     $("big").textContent = got === 3 ? "3!" : String(got);
@@ -571,6 +610,14 @@ function contact(t){
 document.addEventListener("touchstart", function(e){
   if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
+  if (paused) {
+    paused = false;
+    $("start").classList.add("gone");
+    deafUntil = performance.now() + ARM_QUIET;
+    lastTouchStart = performance.now();
+    idle();
+    return;
+  }
   if (!armed) {
     armed = true;
     try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
@@ -654,6 +701,7 @@ $("clear").addEventListener("click", function(e){
   goFullscreen();
   $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0;
   frame = 1; bagsLeft = BAGS; frameStart = 0;
+  scores = [0, 0]; turn = 0;
   wins = 0; plays = 0; points = 0; hud();
   $("why").textContent = "";
 });
