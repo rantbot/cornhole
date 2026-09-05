@@ -65,10 +65,7 @@
   #live { position: fixed; width: 44px; height: 44px; margin: -22px 0 0 -22px;
           border: 3px solid #fff; border-radius: 50%; z-index: 2;
           pointer-events: none; display: none; }
-  .dot.l { background: #ff5252; }
-  /* a win we could not actually see, drawn hollow so it is not mistaken for one we did */
-  .dot.g { background: transparent; border: 3px solid #00e676; }
-  .dot.last { box-shadow: 0 0 0 3px #fff; opacity: 1; }
+    .dot.last { box-shadow: 0 0 0 3px #fff; opacity: 1; }
 
   #big { position: fixed; inset: 0; z-index: 2; display: flex;
          align-items: center; justify-content: center;
@@ -268,11 +265,11 @@ function idle(){
   hud();
 }
 
-function plot(p, win, guessed){
+function plot(p, inHole){
   if (!p) return;
   if (lastDot) lastDot.classList.remove("last");
   var d = document.createElement("div");
-  d.className = "dot last " + (guessed ? "g" : win ? "w" : "l");
+  d.className = "dot last " + (inHole ? "h" : "w");
   d.style.left = p.x + "%"; d.style.top = p.y + "%";
   $("dots").appendChild(d);
   lastDot = d;
@@ -330,8 +327,6 @@ function verdict(){
   var slid = firstPos && lastPos &&
              Math.hypot(lastPos.x - firstPos.x, lastPos.y - firstPos.y) > 12;
 
-  plot(firstPos || { x: 50, y: 50 }, on, guessed);
-
   if (on) {
     wins++;
     /* Where it first came down is the truest reading. Anything after that is
@@ -344,12 +339,14 @@ function verdict(){
     document.body.className = got === 3 ? "three" : "win";
     $("big").textContent = got === 3 ? "3!" : String(got);
     if (got === 3) celebrate();
+    /* a dot is a bag resting on the board, so only a scoring one earns it,
+       and only when the screen actually told us where it came down */
+    if (got > 0 && firstPos && !guessed) plot(firstPos, where === "hole");
     $("why").textContent =
         where === "hole"    ? "In the hole."
       : where === "outside" ? "On the phone but off the board. No points."
       : guessed             ? "Stayed on, though the screen never saw where. One point."
                             : "On the board in " + zone(firstPos) + ".";
-    if (lastDot) lastDot.className = "dot last " + (guessed ? "g" : where === "hole" ? "h" : "w");
   } else {
     document.body.className = "lose";
     $("big").textContent = "0";
