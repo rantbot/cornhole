@@ -32,12 +32,12 @@
   #board { position: fixed; left: 3%; right: 3%; top: 5%; bottom: 5%; z-index: 0;
            border: 2px solid #2f3a45; border-radius: 16px; pointer-events: none;
            background: #121820; }
-  #hole  { position: fixed; left: 50%; top: 30%; width: 30%; z-index: 0;
+  #hole  { position: fixed; left: 50%; top: 33%; width: 42%; z-index: 0;
            aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%;
            background: #05070a; border: 2px solid #3d4c5a; pointer-events: none; }
   #hole::after { content: "3"; position: absolute; inset: 0; display: flex;
                  align-items: center; justify-content: center;
-                 font: 800 34px -apple-system, system-ui, sans-serif; color: #2b3742; }
+                 font: 800 46px -apple-system, system-ui, sans-serif; color: #2b3742; }
   #dots { position: fixed; inset: 0; z-index: 1; }
   .dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
          border-radius: 50%; opacity: .8; }
@@ -124,7 +124,7 @@ var misses = 0, missAt = 0, missTimer = null;
 var MISS_ON = false;        // off until you turn it on
 var missCool = 0;           // nothing may fire again for a while after one does
 var lastQuiet = 0;          // last moment the phone was actually still
-var points = 0, firstPx = null;
+var points = 0, firstPx = null, lastPx = null;
 
 function beep(f, ms){
   if (!ctx) return;
@@ -151,7 +151,7 @@ function clearRound(){ timers.forEach(clearTimeout); timers = []; clearInterval(
 function target(px){
   if (!px) return "unknown";
   var W = innerWidth, H = innerHeight;
-  var hx = W * 0.5, hy = H * 0.30, hr = W * 0.15;
+  var hx = W * 0.5, hy = H * 0.33, hr = W * 0.21;
   if (Math.hypot(px.x - hx, px.y - hy) <= hr) return "hole";
   var inBoard = px.x > W*0.03 && px.x < W*0.97 && px.y > H*0.05 && px.y < H*0.95;
   return inBoard ? "board" : "outside";
@@ -211,7 +211,7 @@ function onImpact(m){
   clearRound();
   lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m;
   plays++; hud();
-  lastContact = 0; firstPos = null; lastPos = null; secondHit = 0;
+  lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
   cancelMiss();
 
   document.body.className = "settle";
@@ -260,13 +260,16 @@ function verdict(){
 
   if (on) {
     wins++;
-    var where = guessed ? "unknown" : target(firstPx);
+    /* in the hole however it got there, landed or slid */
+    var where = guessed ? "unknown"
+      : (target(firstPx) === "hole" || target(lastPx) === "hole") ? "hole"
+      : target(lastPx) === "board" ? "board" : target(firstPx);
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
     points += got;
     document.body.className = "win";
     $("big").textContent = String(got);
     $("why").textContent =
-        where === "hole"    ? "In the hole."
+        where === "hole"    ? (target(firstPx) === "hole" ? "Straight in the hole." : "Slid into the hole.")
       : where === "outside" ? "On the phone but off the board. No points."
       : guessed             ? "Stayed on, though the screen never saw where. One point."
       : slid                ? "Landed on the board in " + zone(firstPos) + ", settled in " + zone(lastPos) + "."
@@ -350,7 +353,8 @@ function contact(t){
   lastContact = performance.now();
   lastPos = { x: +(t.clientX/innerWidth*100).toFixed(1),
               y: +(t.clientY/innerHeight*100).toFixed(1) };
-  if (!firstPos) { firstPos = lastPos; firstPx = { x: t.clientX, y: t.clientY }; }
+  lastPx = { x: t.clientX, y: t.clientY };
+  if (!firstPos) { firstPos = lastPos; firstPx = lastPx; }
   var lv = $("live");
   lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px"; lv.style.display = "block";
 }
