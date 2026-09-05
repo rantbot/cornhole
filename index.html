@@ -202,10 +202,18 @@
     flex: 1 1 0; max-width: 44%; padding: 7px 13px 8px; border-radius: var(--r-sm);
     background: #050D14; border: 1.5px solid #1F2C38;
     box-shadow: inset 0 2px 7px rgba(0,0,0,.9);
-    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
     opacity: .55; transition: opacity .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
-  .pl .who { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .pl .who { display: flex; flex-direction: column; align-items: flex-start;
+             gap: 1px; min-width: 0; }
+  .pl b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-size: var(--t-sm); font-weight: 800; letter-spacing: .01em; line-height: 1.1;
+          pointer-events: auto; padding-bottom: 1px;
+          border-bottom: 1px dashed rgba(244,239,228,.35); }
+  #p0 b { color: var(--p1-lit); }
+  #p1 b { color: var(--p2-lit); }
+  .pl .row2 { display: flex; align-items: baseline; gap: 7px; }
   /* what is sitting on the board this round, before the two sides cancel */
   .pl .live { font-size: var(--t-sm); font-weight: 800; color: var(--gold); }
   .pl .n {
@@ -259,25 +267,11 @@
     letter-spacing: -.01em; pointer-events: none;
   }
   /* whose throw it is, in their own colour */
-  #why.t0, #why.t1 {
-    position: relative; align-self: stretch; margin: 9px 0;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: var(--r-sm); color: #08151F;
-    font-size: 30px; font-weight: 800; letter-spacing: -.03em;
-    text-shadow: 0 1px 0 rgba(255,255,255,.35);
-  }
-  /* the bulb strip along a lit marquee */
-  #why.t0::before, #why.t1::before, #why.t0::after, #why.t1::after {
-    content: ""; position: absolute; left: 8px; right: 8px; height: 5px;
-    background-image: radial-gradient(circle, rgba(255,255,255,.95) 42%, transparent 46%);
-    background-size: 15px 5px; background-repeat: repeat-x;
-  }
-  #why.t0::before, #why.t1::before { top: 5px; }
-  #why.t0::after,  #why.t1::after  { bottom: 5px; }
-  #why.t0 { background: linear-gradient(180deg, #A7D3F7, var(--p1-lit) 55%, #4E97D6);
-            box-shadow: 0 0 26px rgba(47,127,201,.85), inset 0 -3px 0 rgba(0,0,0,.22); }
-  #why.t1 { background: linear-gradient(180deg, #FFC79A, var(--p2-lit) 55%, #D9812F);
-            box-shadow: 0 0 26px rgba(210,98,28,.85), inset 0 -3px 0 rgba(0,0,0,.22); }
+  /* whose throw it is, said once, in their colour. The board frame and the lit
+     score panel already carry it at a distance, so this stays quiet. */
+  #why.t0, #why.t1 { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+  #why.t0 { color: var(--p1-lit); text-shadow: 0 0 18px rgba(47,127,201,.7); }
+  #why.t1 { color: var(--p2-lit); text-shadow: 0 0 18px rgba(210,98,28,.7); }
 
   /* ---------- the verdict, always on a plate ---------- */
   #big {
@@ -410,6 +404,10 @@
   .sw button[aria-pressed="true"] { border-color: var(--chalk);
                box-shadow: 0 0 0 2px rgba(10,27,42,.9), 0 0 0 4px var(--chalk); }
   #settings .two .sw button { width: 30px; height: 26px; }
+  #targets { display: flex; gap: 7px; margin-bottom: 16px; }
+  #targets .btn { padding: 12px 4px; text-align: center; font-size: var(--t-md); }
+  #targets .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold);
+                                       background: rgba(240,180,41,.14); }
   #noise { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
   #noise .btn { text-align: left; font-size: var(--t-sm); padding: 10px 12px; }
   #noise .btn span { display: block; margin-top: 2px; font-size: var(--t-xs);
@@ -417,6 +415,27 @@
   #noise .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold);
                                      background: rgba(240,180,41,.14); }
   #noise .btn[aria-pressed="true"] span { color: var(--gold); opacity: .8; }
+  #rename {
+    position: fixed; inset: 0; z-index: 13; display: none;
+    align-items: flex-start; justify-content: center; padding: 22px;
+    padding-top: 14vh; background: rgba(6,14,22,.88);
+  }
+  #rename.on { display: flex; }
+  #rename .sheet {
+    width: 100%; max-width: 320px; padding: 20px 18px 16px; border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--panel), var(--rail));
+    border: 1.5px solid var(--line-2); box-shadow: var(--lift);
+  }
+  #rename h2 { margin: 0 0 12px; font-size: var(--t-lg); font-weight: 800;
+               letter-spacing: -.03em; color: var(--chalk); text-align: center; }
+  #renameInput {
+    width: 100%; margin-bottom: 12px; padding: 14px; border-radius: var(--r-sm);
+    background: #050D14; border: 1.5px solid #24313D; color: var(--chalk);
+    font: 800 26px var(--sans); letter-spacing: -.02em; text-align: center;
+  }
+  #renameInput:focus { outline: none; border-color: var(--gold); }
+  #rename.e0 #renameInput { color: var(--p1-lit); }
+  #rename.e1 #renameInput { color: var(--p2-lit); }
   #confirm { z-index: 11; display: none; padding: 26px; background: rgba(6,14,22,.84); }
   #confirm.on { display: flex; }
   #confirm .sheet {
@@ -480,14 +499,14 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b60</div>
+    <div id="build">b63</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
     <div id="scores">
-      <div class="pl" id="p0"><span class="who"><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
+      <div class="pl" id="p0"><span class="who"><b></b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
       <div id="vs"></div>
-      <div class="pl" id="p1"><span class="who"><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
+      <div class="pl" id="p1"><span class="who"><b></b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
     </div>
     <span id="ptsSub"></span>
   </div>
@@ -498,6 +517,14 @@
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
 
+  <div id="rename">
+    <div class="sheet">
+      <h2 id="renameTitle">Name</h2>
+      <input id="renameInput" type="text" maxlength="12" autocomplete="off"
+             autocapitalize="words" spellcheck="false">
+      <button class="btn btn-go" id="renameDone">Done</button>
+    </div>
+  </div>
   <div id="settings">
     <div class="sheet">
       <h2>Settings</h2>
@@ -509,6 +536,14 @@
       <div class="two">
         <div><small id="lblP1">Player 1</small><div class="sw" id="swP1"></div></div>
         <div><small id="lblP2">Player 2</small><div class="sw" id="swP2"></div></div>
+      </div>
+
+      <h3>Play to</h3>
+      <div id="targets">
+        <button class="btn" data-t="11">11</button>
+        <button class="btn" data-t="15">15</button>
+        <button class="btn" data-t="21">21</button>
+        <button class="btn" data-t="0">Open</button>
       </div>
 
       <h3>Where you're playing</h3>
@@ -571,6 +606,7 @@ var impactZ = 1;          // how much of the hit went straight down through the 
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
 var appealUntil = 0;      // a lost round can still be put right if it turns up
+var editing = false, gameOver = false;
 var touchOrigin = null, touchMoved = 0;   // telling a pickup from a quiet drop
 var lastTouchStart = -1e9;                // when something newly arrived on the glass
 var HAND_WINDOW = 1400;                   // a contact this fresh, still down, is a hand
@@ -682,6 +718,7 @@ function hud(){
     for (var i = 0; i < BAGS; i++)
     pips += '<i class="' + (i < BAGS - bags[n] ? "used" : "") + '"></i>';
     var el = $("p" + n), active = (turn === n && !paused);
+    el.querySelector("b").textContent = name(n);
     el.querySelector(".n").textContent = scores[n];
     var live = el.querySelector(".live");
     if (live) live.textContent = inning[n] > 0 ? "+" + inning[n] : "";
@@ -694,7 +731,8 @@ function hud(){
     stack += '<i style="background:var(' + col + ');transform:rotate(' +
              ((k * 37 % 13) - 6) + 'deg)"></i>';
   $("ready").innerHTML = (paused || players === 1) ? "" : stack;
-  $("ptsSub").textContent = players === 1 ? "Practice" : "Round " + frame;
+  $("ptsSub").textContent = players === 1 ? "Practice"
+    : "Round " + frame + (cfg.target ? "  \u00b7  to " + cfg.target : "");
 }
 function bumpScore(){
   var el = $("p" + turn);
@@ -750,17 +788,46 @@ function endFrame(){
 
   $("startBody").classList.add("hide");
   $("summary").classList.remove("hide");
-  $("startTitle").innerHTML = "Round " + (frame - 1);
-
   var win = diff === 0 ? -1 : (diff > 0 ? 0 : 1);
+
+  /* Cornhole is decided at the end of a round, once the two sides have
+     cancelled, so the target is only checked here. */
+  var done = cfg.target && players === 2 &&
+             (scores[0] >= cfg.target || scores[1] >= cfg.target);
+  if (done) {
+    gameOver = true;
+    var champ = scores[0] > scores[1] ? 0 : 1;
+    $("startTitle").innerHTML = name(champ) + "<br>wins";
+    $("sumWon").className = "w" + champ;
+    $("sumWon").innerHTML = scores[champ] + " to " + scores[1 - champ] +
+      "<small>in " + (frame - 1) + (frame - 1 === 1 ? " round" : " rounds") + "</small>";
+    $("sumR0").querySelector("b").textContent = name(0);
+    $("sumR1").querySelector("b").textContent = name(1);
+    $("sumR0").querySelector("span").textContent = scores[0];
+    $("sumR1").querySelector("span").textContent = scores[1];
+    $("startFoot").textContent = "Clear the board for a new game.";
+    $("modes").classList.add("hide");
+    $("startTap").classList.remove("hide");
+    $("startTap").textContent = "Play again";
+    celebrate();
+    setTimeout(function(){
+      $("dots").innerHTML = ""; lastDot = null; onBoard = [];
+      $("start").classList.remove("gone");
+    }, 900);
+    return;
+  }
+
+  $("startTitle").innerHTML = "Round " + (frame - 1);
   $("sumWon").className = win < 0 ? "none" : "w" + win;
   $("sumWon").innerHTML = win < 0
     ? "No score<small>" + got[0] + " each, so they cancel out</small>"
-    : "Player " + (win + 1) + " +" + Math.abs(diff) +
+    : name(win) + " +" + Math.abs(diff) +
       "<small>" + got[0] + " on the board against " + got[1] + "</small>";
+  $("sumR0").querySelector("b").textContent = name(0);
+  $("sumR1").querySelector("b").textContent = name(1);
   $("sumR0").querySelector("span").textContent = scores[0];
   $("sumR1").querySelector("span").textContent = scores[1];
-  $("startFoot").textContent = "Clear the board. Player 1 throws first.";
+  $("startFoot").textContent = "Clear the board. " + name(0) + " throws first.";
 
   $("modes").classList.add("hide");
   $("startTap").classList.remove("hide");
@@ -790,7 +857,7 @@ function idle(){
   $("why").className = "";
   if (!paused && armed) {
     if (players === 2) {
-      $("why").textContent = "Player " + (turn + 1);
+      $("why").textContent = name(turn);
       $("why").className = "t" + turn;
     } else {
       $("why").textContent = plays === 0 ? "Throw a bag"
@@ -925,7 +992,7 @@ function knockAbout(hit){
 /* ---- round ---- */
 function onImpact(m, zShare){
   var t = performance.now();
-  if (paused || waiting || t < deafUntil || t - lastImpact < 900) return;
+  if (editing || paused || waiting || t < deafUntil || t - lastImpact < 900) return;
   /* A thrown bag jolts the phone first and touches second. A hand reaching in
      touches first. So a contact that arrived just before this jolt, and is
      still on the glass, means you are picking a bag up rather than landing one.
@@ -1154,7 +1221,7 @@ function contact(t){
   lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings") || e.target.closest("#rename")) return;
   e.preventDefault();
   down = e.touches.length;
   contactAt = performance.now();
@@ -1164,7 +1231,7 @@ document.addEventListener("touchstart", function(e){
   contact(t0);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings") || e.target.closest("#rename")) return;
   e.preventDefault();
   var t = e.changedTouches[0];
   if (touchOrigin) {
@@ -1178,7 +1245,7 @@ document.addEventListener("touchmove", function(e){
   if (waiting) contact(t);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings") || e.target.closest("#rename")) return;
   e.preventDefault();
   down = e.touches.length;
   /* A packet being lifted drags across the glass on the way up, and that jolt
@@ -1228,6 +1295,12 @@ function goFullscreen(){
 checkChrome();
 
 function resume(){
+  if (gameOver) {
+    gameOver = false;
+    scores = [0, 0]; inning = [0, 0]; onBoard = [];
+    bags = [BAGS, BAGS]; frame = 1; turn = 0; wins = 0; plays = 0;
+    $("dots").innerHTML = ""; lastDot = null;
+  }
   paused = false;
   $("start").classList.add("gone");
   deafUntil = performance.now() + ARM_QUIET;
@@ -1266,12 +1339,17 @@ var TABLES = [
   { acc: 0.60, zh: 0.46, zm: 0.66 }
 ];
 
-var cfg = { wood: 0, p1: 0, p2: 1, table: 1 };
+var cfg = { wood: 0, p1: 0, p2: 1, table: 1, n1: "Player 1", n2: "Player 2", target: 21 };
 try {
   var saved = JSON.parse(localStorage.getItem("pocket-cfg") || "null");
-  if (saved) cfg = saved;
+  if (saved) { for (var k in saved) cfg[k] = saved[k]; }
 } catch (e) {}
 
+function name(n){
+  var v = (n === 0 ? cfg.n1 : cfg.n2) || "";
+  v = v.trim().slice(0, 12);
+  return v || ("Player " + (n + 1));
+}
 function applyCfg(){
   var r = document.documentElement.style;
   var w = WOODS[cfg.wood].c;
@@ -1310,10 +1388,24 @@ function paintSwatches(){
   [].forEach.call($("noise").children, function(b, i){
     b.setAttribute("aria-pressed", i === cfg.table ? "true" : "false");
   });
-  $("lblP2").style.display = (typeof players !== "undefined" && players === 1) ? "none" : "";
-  $("swP2").style.display  = (typeof players !== "undefined" && players === 1) ? "none" : "";
+  [].forEach.call($("targets").children, function(b){
+    b.setAttribute("aria-pressed", +b.getAttribute("data-t") === cfg.target ? "true" : "false");
+  });
+  var solo = (typeof players !== "undefined" && players === 1);
+  $("lblP1").textContent = name(0);
+  $("lblP2").textContent = name(1);
+  $("lblP2").style.display = solo ? "none" : "";
+  $("swP2").style.display  = solo ? "none" : "";
+
 }
 
+[].forEach.call($("targets").children, function(b){
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    cfg.target = +b.getAttribute("data-t");
+    applyCfg(); hud();
+  });
+});
 [].forEach.call($("noise").children, function(b){
   b.addEventListener("click", function(e){
     e.stopPropagation();
@@ -1321,6 +1413,37 @@ function paintSwatches(){
     applyCfg();
   });
 });
+function openRename(n){
+  editing = true;
+  $("rename").className = "on e" + n;
+  $("renameTitle").textContent = "Who is throwing " + (n === 0 ? "first" : "second") + "?";
+  var inp = $("renameInput");
+  inp.placeholder = "Player " + (n + 1);
+  inp.value = name(n) === "Player " + (n + 1) ? "" : name(n);
+  inp.dataset.who = n;
+  setTimeout(function(){ inp.focus(); inp.select(); }, 60);
+}
+function closeRename(){
+  var inp = $("renameInput"), n = +inp.dataset.who;
+  var v = inp.value.trim().slice(0, 12);
+  if (n === 0) cfg.n1 = v || "Player 1"; else cfg.n2 = v || "Player 2";
+  try { localStorage.setItem("pocket-cfg", JSON.stringify(cfg)); } catch (e) {}
+  $("rename").className = "";
+  editing = false;
+  deafUntil = performance.now() + 700;
+  hud();
+}
+[0, 1].forEach(function(n){
+  $("p" + n).querySelector("b").addEventListener("click", function(e){
+    e.stopPropagation();
+    if (players === 1 && n === 1) return;
+    openRename(n);
+  });
+});
+$("renameDone").addEventListener("click", function(e){ e.stopPropagation(); closeRename(); });
+$("renameInput").addEventListener("keydown", function(e){ if (e.key === "Enter") closeRename(); });
+$("renameInput").addEventListener("click", function(e){ e.stopPropagation(); });
+
 $("gear").addEventListener("click", function(e){
   e.stopPropagation(); paintSwatches(); $("settings").classList.add("on");
 });
@@ -1333,7 +1456,7 @@ function exitGame(){
   goFullscreen();
   $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0; onBoard = [];
   frame = 1; bags = [BAGS, BAGS];
-  scores = [0, 0]; turn = 0; paused = false; inning = [0, 0]; onBoard = [];
+  scores = [0, 0]; turn = 0; paused = false; inning = [0, 0]; onBoard = []; gameOver = false;
   $("startTitle").innerHTML = "Pocket<br>Cornhole";
   $("summary").classList.add("hide");
   $("startBody").classList.remove("hide");
@@ -1352,7 +1475,7 @@ $("clear").addEventListener("click", function(e){
   var mid = plays > 0 || scores[0] > 0 || scores[1] > 0;
   if (!mid) { exitGame(); return; }
   $("confirmBody").textContent = players === 2
-    ? "Player 1 has " + scores[0] + ", Player 2 has " + scores[1] + ". Both go back to zero."
+    ? name(0) + " has " + scores[0] + ", " + name(1) + " has " + scores[1] + ". Both go back to zero."
     : "You are on " + scores[0] + (scores[0] === 1 ? " point." : " points.") + " That goes back to zero.";
   $("confirm").classList.add("on");
 });
