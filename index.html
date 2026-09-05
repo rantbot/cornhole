@@ -102,6 +102,9 @@
   #install b { font-weight: 600; color: #aab4c0; }
   #dismiss { width: 22px; height: 22px; flex: none; border-radius: 50%;
              background: #2b333d; color: #8d97a3; border: 0; font-size: 13px; line-height: 1; }
+  #build { position: fixed; right: 6px; bottom: calc(4px + env(safe-area-inset-bottom));
+           z-index: 3; pointer-events: none; color: #3a4550;
+           font: 500 9px ui-monospace, Menlo, monospace; }
   #clear { left: 8px; }
   #miss  { left: 58px; }
   #cut   { right: 8px; }
@@ -115,6 +118,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
+  <div id="build">b18</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -463,7 +467,15 @@ document.addEventListener("touchcancel", lift, {passive:false});
 /* ---- corners ---- */
 if ("serviceWorker" in navigator)
   addEventListener("load", function(){
-    navigator.serviceWorker.register("./sw.js").catch(function(){});
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
+      .then(function(reg){ reg.update(); })
+      .catch(function(){});
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if (reloaded) return;
+      reloaded = true;
+      location.reload();          // a new build took over, show it straight away
+    });
   });
 
 document.addEventListener("DOMContentLoaded", function(){
