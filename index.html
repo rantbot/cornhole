@@ -85,16 +85,10 @@
          font: 600 16px/1.35 -apple-system, system-ui, sans-serif; }
 
   /* two small corner controls, well clear of where a packet lands */
-  #ctl { position: fixed; top: calc(0.6vh + env(safe-area-inset-top)); left: 6px; right: 6px;
-         z-index: 4; display: flex; gap: 6px; }
-  #ctl button { flex: 1; padding: 6px 4px 7px; border-radius: 9px;
-                background: rgba(30,34,40,.9); border: 1px solid #333c46;
-                color: #7d8894; font: 600 10px/1.15 -apple-system, system-ui, sans-serif;
-                text-align: center; }
-  #ctl button span { display: block; font-size: 14px; font-weight: 800; color: #dbe3ea;
-                     margin-top: 3px; letter-spacing: -.01em; }
-  #ctl button.lo span { color: #8fd6ff; }
-  #ctl button.hi span { color: #ffcf6b; }
+  #clear { position: fixed; top: calc(0.8vh + env(safe-area-inset-top)); left: 8px;
+           width: 44px; height: 44px; border-radius: 50%; z-index: 4;
+           background: rgba(30,34,40,.9); color: #7d8894; border: 1px solid #333c46;
+           font: 600 11px -apple-system, system-ui, sans-serif; }
   /* a hairline where the browser bar sits, nothing more */
   #oob { position: fixed; top: 0; left: 0; right: 0; height: 1px; z-index: 0;
          pointer-events: none; display: none; background: #33404d; }
@@ -123,16 +117,12 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b29</div>
+  <div id="build">b30</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
-  <div id="ctl">
-    <button id="trig">picks up throws<span>med</span></button>
-    <button id="cut">calls bounces<span>med</span></button>
-    <button id="clear">board<span>clear</span></button>
-  </div>
+  <button id="clear">clear</button>
 
 <script>
 (function(){
@@ -145,10 +135,11 @@ var LISTEN_MS  = 850;   // quiet window, listening for it landing somewhere else
 var BLANK_MS   = 200;   // the landing itself rings for longer than you would think
 var BUZZ_AT    = [850, 1050, 1250, 1470, 1700];
 var VERDICT_AT = 2000;
-var LATE_FROM  = 550;
+var LATE_FROM  = 950;   // was the med step of the bounce dial
 var EXTRA_BUZZ = [0, 350, 700], EXTRA_FOR = 1100;
 var ARM_QUIET  = 2000;          // silent, no countdown on screen
-var BUZZ_DUR   = 300, BUZZ_TAIL = 200, ACC_THR = 0.35;
+var BUZZ_DUR   = 300, BUZZ_TAIL = 200;
+var ACC_THR    = 0.30;  // was the med step of the trigger dial
 
 var armed = false, ctx = null, waiting = false, extended = false;
 var wins = 0, plays = 0;
@@ -503,7 +494,7 @@ function contact(t){
   lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   if (!armed) {
     armed = true;
@@ -522,7 +513,7 @@ document.addEventListener("touchstart", function(e){
   contact(t0);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   var t = e.changedTouches[0];
   if (touchOrigin) {
@@ -532,7 +523,7 @@ document.addEventListener("touchmove", function(e){
   if (waiting) contact(t);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
   e.preventDefault();
   down = e.touches.length;
   /* A packet being lifted drags across the glass on the way up, and that jolt
@@ -587,52 +578,7 @@ $("clear").addEventListener("click", function(e){
   wins = 0; plays = 0; points = 0; hud();
   $("why").textContent = "";
 });
-/* Five steps each, spread wide, so the setting that works is somewhere inside
-   the scale rather than off the end of it. */
-var TRIG_STEPS = [
-  { name: "highest", acc: 0.05 },
-  { name: "high",    acc: 0.12 },
-  { name: "med",     acc: 0.30 },
-  { name: "low",     acc: 0.70 },
-  { name: "lowest",  acc: 1.50 }
-];
-var CUT_STEPS = [
-  { name: "never",  late: 0    },
-  { name: "rarely", late: 400  },
-  { name: "med",    late: 950  },
-  { name: "often",  late: 1400 },
-  { name: "always", late: 1850 }
-];
-var trigIdx = 2, cutIdx = 2;
 
-function paint(btn, label, steps, idx){
-  btn.innerHTML = label + "<span>" + steps[idx].name + "</span>";
-  btn.className = idx < 2 ? "lo" : idx > 2 ? "hi" : "";
-}
-function applyTrig(){
-  ACC_THR = TRIG_STEPS[trigIdx].acc;
-  paint($("trig"), "picks up throws", TRIG_STEPS, trigIdx);
-}
-function applyCut(){
-  LATE_FROM = CUT_STEPS[cutIdx].late;
-  paint($("cut"), "calls bounces", CUT_STEPS, cutIdx);
-}
-function flash(msg){
-  $("why").textContent = msg;
-  setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1900);
-}
-$("trig").addEventListener("click", function(e){
-  e.stopPropagation();
-  trigIdx = (trigIdx + 1) % TRIG_STEPS.length; applyTrig();
-  flash("Starts a round above " + ACC_THR.toFixed(2) + " m/s2.");
-});
-$("cut").addEventListener("click", function(e){
-  e.stopPropagation();
-  cutIdx = (cutIdx + 1) % CUT_STEPS.length; applyCut();
-  flash(LATE_FROM === 0 ? "Any contact counts, so bounces will score."
-                        : "Needs contact after " + LATE_FROM + "ms to be sure it stayed.");
-});
-applyTrig(); applyCut();
 })();
 </script>
 </body>
