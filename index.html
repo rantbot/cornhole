@@ -104,6 +104,26 @@
   #dismiss { width: 22px; height: 22px; flex: none; border-radius: 50%;
              background: #2b333d; color: #8d97a3; border: 0; font-size: 13px; line-height: 1; }
   /* readable on the dark board and on the green, amber and red verdict flashes */
+  /* pointer-events stays off so the tap reaches the same handler that arms it */
+  #start { position: fixed; inset: 0; z-index: 6; pointer-events: none;
+           display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 22px; padding: 0 30px; text-align: center;
+           background: radial-gradient(120% 80% at 50% 38%, #16202b 0%, #0b0e12 70%); }
+  #start.gone { display: none; }
+  #start h1 { margin: 0; font-size: 40px; line-height: 1.02; font-weight: 800;
+              letter-spacing: -.035em; color: #f2f6fa; }
+  #start p  { margin: 0; max-width: 22ch; color: #8b96a3;
+              font: 500 15px/1.5 -apple-system, system-ui, sans-serif; }
+  #start .tap { margin-top: 10px; padding: 15px 30px; border-radius: 999px;
+                border: 2px solid #2f9e6b; color: #6ee7a8; background: rgba(0,200,83,.09);
+                font: 700 18px -apple-system, system-ui, sans-serif;
+                animation: breathe 2.4s ease-in-out infinite; }
+  #start small { color: #5d6875; font: 500 12px -apple-system, system-ui, sans-serif; }
+  @keyframes breathe {
+    0%,100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,200,83,.30); }
+    50%     { transform: scale(1.04); box-shadow: 0 0 0 16px rgba(0,200,83,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { #start .tap { animation: none; } }
   #build { position: fixed; right: 7px; bottom: calc(6px + env(safe-area-inset-bottom));
            z-index: 5; pointer-events: none; padding: 3px 7px; border-radius: 6px;
            background: rgba(0,0,0,.42); color: #b9c4cf;
@@ -117,9 +137,15 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b31</div>
+  <div id="start">
+    <h1>Packet<br>Cornhole</h1>
+    <p>Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
+    <div class="tap">Tap anywhere to start</div>
+    <small>Then hands off the phone for a moment.</small>
+  </div>
+  <div id="build">b33</div>
   <div id="big"></div>
-  <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
+  <div id="hud"><span id="pts">0</span><span id="ptsSub"></span></div>
   <div id="why"></div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
   <button id="clear">clear</button>
@@ -152,7 +178,8 @@ var firstContactAt = 0, liftAt = 0;
 var BRIEF_MS = 300;     // a bounce brushes the glass, it does not rest on it
 var points = 0, firstPx = null, lastPx = null;
 var impactZ = 1;          // how much of the hit went straight down through the glass
-var Z_MIN = 0.45;         // below this it came in sideways, so through the table
+var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
+var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
 var appealUntil = 0;      // a lost round can still be put right if it turns up
 var touchOrigin = null, touchMoved = 0;   // telling a pickup from a quiet drop
 var pendingDot = null, pendingUntil = 0;  // a bag placed before we knew its spot
@@ -320,6 +347,10 @@ function plot(p, inHole, unknown){
 function onImpact(m, zShare){
   var t = performance.now();
   if (waiting || t < deafUntil || t - lastImpact < 900) return;
+  /* A packet lands through the glass, so most of it is on z. A knock to the
+     table arrives sideways through the table top. Drop those outright, with
+     no round, no flash and no sound. */
+  if (zShare < Z_HARD) return;
   clearRound();
   lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m; impactZ = zShare;
   plays++; hud();
@@ -367,8 +398,7 @@ function verdict(){
     plays--; hud();
     document.body.className = "";
     $("big").classList.remove("on");
-    $("why").textContent = "Table knock, ignored. Sideways " +
-                           (100 - Math.round(impactZ * 100)) + "%.";
+    $("why").textContent = "Table knock, ignored.";
     setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1600);
     return;
   }
@@ -511,6 +541,7 @@ document.addEventListener("touchstart", function(e){
     try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
     startMotion();
     goFullscreen();
+    $("start").classList.add("gone");
     /* quiet for a moment so your finger leaving the glass is not a throw */
     deafUntil = performance.now() + ARM_QUIET;
     idle();
