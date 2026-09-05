@@ -1,6 +1,6 @@
 /* Network first, so pushing a new build shows up immediately. The cache is
    only a fallback for when there is no signal at the table. */
-const CACHE = "pocket-b73";
+const CACHE = "pocket-b74";
 const FILES = ["./index.html", "./manifest.webmanifest",
                "./icon-192.png", "./icon-512.png", "./icon-maskable.png"];
 
