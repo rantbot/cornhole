@@ -61,6 +61,8 @@
          border-radius: 50%; opacity: .8; }
   .dot.w { background: #00e676; }
   .dot.h { background: #ffd54f; }
+  /* scored, but the screen never told us exactly where. shown mid board. */
+  .dot.u { background: rgba(0,230,118,.18); border: 2px dashed #00e676; }
   #live { position: fixed; width: 44px; height: 44px; margin: -22px 0 0 -22px;
           border: 3px solid #fff; border-radius: 50%; z-index: 2;
           pointer-events: none; display: none; }
@@ -119,7 +121,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b25</div>
+  <div id="build">b26</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -289,11 +291,11 @@ function appeal(px, pos){
   setTimeout(function(){ if (!waiting) idle(); }, 1500);
 }
 
-function plot(p, inHole){
+function plot(p, inHole, unknown){
   if (!p) return;
   if (lastDot) lastDot.classList.remove("last");
   var d = document.createElement("div");
-  d.className = "dot last " + (inHole ? "h" : "w");
+  d.className = "dot last " + (unknown ? "u" : inHole ? "h" : "w");
   d.style.left = p.x + "%"; d.style.top = p.y + "%";
   $("dots").appendChild(d);
   lastDot = d;
@@ -389,7 +391,12 @@ function verdict(){
     if (got === 3) celebrate();
     /* a dot is a bag resting on the board, so only a scoring one earns it,
        and only when the screen actually told us where it came down */
-    if (got > 0 && firstPos && !guessed) plot(firstPos, where === "hole");
+    /* every point puts a bag on the board. if the screen never gave us a spot,
+       it goes mid board as a dashed one so the count always matches. */
+    if (got > 0) {
+      if (firstPos && !guessed) plot(firstPos, where === "hole", false);
+      else plot({ x: 50, y: 62 }, false, true);
+    }
     $("why").textContent =
         where === "hole"    ? "In the hole."
       : where === "outside" ? "On the phone but off the board. No points."
