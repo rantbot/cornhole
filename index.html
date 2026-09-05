@@ -119,7 +119,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b24</div>
+  <div id="build">b25</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -135,10 +135,12 @@
 "use strict";
 var $ = function(i){ return document.getElementById(i); };
 
-var LISTEN_MS  = 420;   // quiet window, listening for it landing somewhere else
-var BLANK_MS   = 220;   // the landing itself rings for longer than you would think
-var BUZZ_AT    = [420, 620, 820, 1040, 1270];
-var VERDICT_AT = 1550;
+/* The buzz drowns out everything, so it waits. A bounced packet needs time to
+   travel and land, and the phone has to be quiet to hear it arrive. */
+var LISTEN_MS  = 850;   // quiet window, listening for it landing somewhere else
+var BLANK_MS   = 200;   // the landing itself rings for longer than you would think
+var BUZZ_AT    = [850, 1050, 1250, 1470, 1700];
+var VERDICT_AT = 2000;
 var LATE_FROM  = 550;
 var EXTRA_BUZZ = [0, 350, 700], EXTRA_FOR = 1100;
 var ARM_QUIET  = 2000;          // silent, no countdown on screen
@@ -413,9 +415,13 @@ function motion(ax, ay, az){
   var m = Math.sqrt(ax*ax + ay*ay + az*az);
   if (waiting) {
     var age = performance.now() - roundT0;
-    if (m < ACC_THR * 0.35) lastQuiet = performance.now();
-    if (!secondHit && age > BLANK_MS && age < LISTEN_MS && m > ACC_THR
-        && performance.now() - lastQuiet < 120) secondHit = m;   // a fresh thump, not ringdown
+    if (m < Math.max(0.05, ACC_THR * 0.35) * 0.5) lastQuiet = performance.now();
+    /* Landing on the table arrives through the table top, heavily damped, so
+       it is always much softer than the direct hit. Listen well below the
+       trigger, but still demand a fresh transient rather than ringdown. */
+    if (!secondHit && age > BLANK_MS && age < LISTEN_MS
+        && m > Math.max(0.05, ACC_THR * 0.35)
+        && performance.now() - lastQuiet < 130) secondHit = m;
     return;                       // a round in flight is never restarted
   }
   if (m > ACC_THR) { onImpact(m, Math.abs(az) / m); return; }
@@ -539,10 +545,10 @@ var TRIG_STEPS = [
 ];
 var CUT_STEPS = [
   { name: "never",  late: 0    },
-  { name: "rarely", late: 250  },
-  { name: "med",    late: 550  },
-  { name: "often",  late: 1000 },
-  { name: "always", late: 1500 }
+  { name: "rarely", late: 400  },
+  { name: "med",    late: 950  },
+  { name: "often",  late: 1400 },
+  { name: "always", late: 1850 }
 ];
 var trigIdx = 2, cutIdx = 2;
 
