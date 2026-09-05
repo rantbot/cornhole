@@ -118,7 +118,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b20</div>
+  <div id="build">b22</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -134,7 +134,7 @@
 var $ = function(i){ return document.getElementById(i); };
 
 var LISTEN_MS  = 420;   // quiet window, listening for it landing somewhere else
-var BLANK_MS   = 90;    // the first hit rings for a moment, ignore that
+var BLANK_MS   = 220;   // the landing itself rings for longer than you would think
 var BUZZ_AT    = [420, 620, 820, 1040, 1270];
 var VERDICT_AT = 1550;
 var LATE_FROM  = 550;
@@ -156,6 +156,8 @@ var MISS_ON = false;        // off until you turn it on
 var missCool = 0;           // nothing may fire again for a while after one does
 var lastQuiet = 0;          // last moment the phone was actually still
 var points = 0, firstPx = null, lastPx = null;
+var impactZ = 1;          // how much of the hit went straight down through the glass
+var Z_MIN = 0.45;         // below this it came in sideways, so through the table
 var appealUntil = 0;      // a lost round can still be put right if it turns up
 var APPEAL_MS = 5000;
 
@@ -300,11 +302,11 @@ function plot(p, inHole){
 }
 
 /* ---- round ---- */
-function onImpact(m){
+function onImpact(m, zShare){
   var t = performance.now();
   if (waiting || t < deafUntil || t - lastImpact < 900) return;
   clearRound();
-  lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m;
+  lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m; impactZ = zShare;
   plays++; hud();
   lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
   appealUntil = 0;
@@ -339,6 +341,22 @@ function verdict(){
     return;
   }
 
+  /* Sideways energy and nothing on the screen means the table was knocked,
+     not the phone. Drop the round entirely rather than scoring it. A landing
+     the screen actually felt can never be rejected here. */
+  if (!lastContact && impactZ < Z_MIN) {
+    waiting = false; clearRound();
+    $("live").style.display = "none";
+    lastImpact = performance.now();
+    plays--; hud();
+    document.body.className = "";
+    $("big").classList.remove("on");
+    $("why").textContent = "Table knock, ignored. Sideways " +
+                           (100 - Math.round(impactZ * 100)) + "%.";
+    setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1600);
+    return;
+  }
+
   waiting = false; clearRound();
   $("live").style.display = "none";
   lastImpact = performance.now();
@@ -353,7 +371,9 @@ function verdict(){
      it left. The cutoff is now only a tiebreaker, not the main test. */
   var certain = down > 0 || (lastContact && lastContact - roundT0 >= LATE_FROM);
   var guessed = !lastContact && !flewOff;
-  var on = certain || !flewOff;
+  /* The screen feeling the packet is direct evidence. A second thump is only
+     an inference, so it decides nothing when the screen has already spoken. */
+  var on = lastContact > 0 || !flewOff;
   var slid = firstPos && lastPos &&
              Math.hypot(lastPos.x - firstPos.x, lastPos.y - firstPos.y) > 12;
 
@@ -375,7 +395,7 @@ function verdict(){
     $("why").textContent =
         where === "hole"    ? "In the hole."
       : where === "outside" ? "On the phone but off the board. No points."
-      : guessed             ? "Stayed on, though the screen never saw where. One point."
+      : guessed             ? "Never showed on screen, but it landed square. One point."
                             : "On the board in " + zone(firstPos) + ".";
   } else {
     document.body.className = "lose";
@@ -397,10 +417,12 @@ function motion(ax, ay, az){
   var m = Math.sqrt(ax*ax + ay*ay + az*az);
   if (waiting) {
     var age = performance.now() - roundT0;
-    if (!secondHit && age > BLANK_MS && age < LISTEN_MS && m > ACC_THR) secondHit = m;
+    if (m < ACC_THR * 0.35) lastQuiet = performance.now();
+    if (!secondHit && age > BLANK_MS && age < LISTEN_MS && m > ACC_THR
+        && performance.now() - lastQuiet < 120) secondHit = m;   // a fresh thump, not ringdown
     return;                       // a round in flight is never restarted
   }
-  if (m > ACC_THR) { cancelMiss(); onImpact(m); return; }
+  if (m > ACC_THR) { cancelMiss(); onImpact(m, Math.abs(az) / m); return; }
   if (m < faint() * 0.5) lastQuiet = performance.now();
   if (MISS_ON && m > faint()) watchMiss(m);
 }
@@ -460,7 +482,8 @@ function contact(t){
   if (!firstPos) { firstPos = lastPos; firstPx = lastPx; }
   if (!waiting && performance.now() < appealUntil) appeal(lastPx, lastPos);
   var lv = $("live");
-  lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px"; lv.style.display = "block";
+  lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px";
+  lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
   if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
