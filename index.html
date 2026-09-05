@@ -77,6 +77,7 @@
              pointer-events: none; color: #f0c674;
              font: 600 13px/1.4 -apple-system, system-ui, sans-serif; }
   #clear { left: 8px; }
+  #miss  { left: 58px; }
   #cut   { right: 8px; }
   #trig  { right: 58px; }
 </style>
@@ -92,6 +93,7 @@
   <div id="why"></div>
   <div id="install"></div>
   <button class="corner" id="clear">clear</button>
+  <button class="corner" id="miss">miss<br>off</button>
   <button class="corner" id="trig">.35</button>
   <button class="corner" id="cut">550</button>
 
@@ -119,6 +121,9 @@ var down = 0, lastContact = 0, firstPos = null, lastPos = null;
 var roundT0 = 0, timers = [], poll = null, lastDot = null, impactMag = 0;
 var secondHit = 0;      // it came off and hit something else
 var misses = 0, missAt = 0, missTimer = null;
+var MISS_ON = false;        // off until you turn it on
+var missCool = 0;           // nothing may fire again for a while after one does
+var lastQuiet = 0;          // last moment the phone was actually still
 var points = 0, firstPx = null;
 
 function beep(f, ms){
@@ -290,7 +295,8 @@ function motion(ax, ay, az){
     return;                       // a round in flight is never restarted
   }
   if (m > ACC_THR) { cancelMiss(); onImpact(m); return; }
-  if (m > faint()) watchMiss(m);
+  if (m < faint() * 0.5) lastQuiet = performance.now();
+  if (MISS_ON && m > faint()) watchMiss(m);
 }
 
 function cancelMiss(){ clearTimeout(missTimer); missTimer = null; missAt = 0; }
@@ -299,13 +305,16 @@ function cancelMiss(){ clearTimeout(missTimer); missTimer = null; missAt = 0; }
    lands on the screen and no real impact follows, it went wide. */
 function watchMiss(m){
   var t = performance.now();
-  if (waiting || missTimer || t < deafUntil) return;
+  if (waiting || missTimer || t < deafUntil || t < missCool) return;
   if (t - lastImpact < 900) return;
+  if (m < 0.22) return;                    // a hard floor, whatever the trigger is
+  if (t - lastQuiet > 400) return;         // sustained rumble is not a throw
   missAt = t;
   missTimer = setTimeout(function(){
     missTimer = null;
     if (waiting || lastContact > missAt || down > 0) return;
     misses++; hud();
+    missCool = performance.now() + 3000;
     document.body.className = "miss";
     $("big").textContent = "MISS"; $("big").classList.add("on");
     $("why").textContent = "Only a faint knock at " + m.toFixed(2) + " and nothing on the screen.";
@@ -400,6 +409,13 @@ $("trig").addEventListener("click", function(e){
   e.stopPropagation();
   ACC_THR = THRS[(THRS.indexOf(ACC_THR) + 1) % THRS.length];
   this.textContent = ACC_THR.toFixed(2).replace("0.", ".");
+});
+$("miss").addEventListener("click", function(e){
+  e.stopPropagation();
+  MISS_ON = !MISS_ON;
+  missCool = 0;
+  this.innerHTML = "miss<br>" + (MISS_ON ? "on" : "off");
+  this.style.color = MISS_ON ? "#f0c674" : "#999";
 });
 var CUTS = [0, 150, 300, 400, 550, 700, 900];
 $("cut").addEventListener("click", function(e){
