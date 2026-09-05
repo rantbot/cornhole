@@ -465,8 +465,9 @@
              background: rgba(244,239,228,.14); color: var(--chalk-2);
              border: 0; font-size: var(--t-xs); line-height: 1; }
   #build {
-    margin-top: -8px; color: var(--chalk-3); opacity: .55;
-    font: 600 10px ui-monospace, Menlo, monospace;
+    margin-top: -6px; padding: 4px 10px; border-radius: var(--r-pill);
+    background: rgba(244,239,228,.07); border: 1px solid var(--line);
+    color: var(--chalk-2); font: 700 var(--t-sm) ui-monospace, Menlo, monospace;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -499,7 +500,7 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b63</div>
+    <div id="build">b64</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -606,7 +607,7 @@ var impactZ = 1;          // how much of the hit went straight down through the 
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
 var appealUntil = 0;      // a lost round can still be put right if it turns up
-var editing = false, gameOver = false;
+var editing = false, gameOver = false, silenced = false;
 var touchOrigin = null, touchMoved = 0;   // telling a pickup from a quiet drop
 var lastTouchStart = -1e9;                // when something newly arrived on the glass
 var HAND_WINDOW = 1400;                   // a contact this fresh, still down, is a hand
@@ -619,7 +620,7 @@ var contactAt = 0, pickedUp = false;
 var APPEAL_MS = 5000;
 
 function beep(f, ms){
-  if (!ctx) return;
+  if (!ctx || silenced) return;
   var o = ctx.createOscillator(), g = ctx.createGain();
   o.type = "square"; o.frequency.value = f; g.gain.value = .22;
   o.connect(g); g.connect(ctx.destination); o.start();
@@ -628,6 +629,7 @@ function beep(f, ms){
 }
 /* A miss should feel like one. Low sawtooth blast, a shove, and a long buzz. */
 function boo(){
+  if (silenced) return;
   if (ctx) {
     [[150, 0, 260], [110, 190, 420]].forEach(function(n){
       setTimeout(function(){
@@ -647,6 +649,7 @@ function boo(){
 }
 
 function celebrate(){
+  if (silenced) return;
   var W = innerWidth, H = innerHeight;
   var cx = W * 0.5, cy = H * 0.44;
   var cols = ["#F0B429", "#F4EFE4", "#2F7FC9", "#D2621C"];
@@ -677,12 +680,12 @@ function celebrate(){
 }
 
 function shake(){
-  if (!navigator.vibrate) return;
+  if (!navigator.vibrate || silenced) return;
   navigator.vibrate([45,35,45,35,45,35,60]);
   deafUntil = performance.now() + BUZZ_DUR + BUZZ_TAIL;
 }
 function shakeHard(){
-  if (!navigator.vibrate) return;
+  if (!navigator.vibrate || silenced) return;
   navigator.vibrate(500);
   deafUntil = performance.now() + 500 + BUZZ_TAIL;
 }
@@ -841,6 +844,7 @@ function endFrame(){
 function startGame(n){
   players = n;
   armed = true;
+  silenced = false;
   $("scores").classList.toggle("solo", players === 1);
   try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
   startMotion();
@@ -1295,6 +1299,7 @@ function goFullscreen(){
 checkChrome();
 
 function resume(){
+  silenced = false;
   if (gameOver) {
     gameOver = false;
     scores = [0, 0]; inning = [0, 0]; onBoard = [];
@@ -1454,9 +1459,20 @@ applyCfg();
 
 function exitGame(){
   goFullscreen();
+  /* Tear the round down, not just the screen. Otherwise its timers keep
+     firing behind the start card and you hear a game you already left. */
+  silenced = true;
+  waiting = false; editing = false;
+  clearRound();
+  if (navigator.vibrate) navigator.vibrate(0);
+  document.body.className = "";
+  $("big").classList.remove("on");
+  $("live").style.display = "none";
+  $("rename").className = ""; $("settings").classList.remove("on");
+  lastImpact = performance.now(); deafUntil = performance.now() + 1e6;
   $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0; onBoard = [];
   frame = 1; bags = [BAGS, BAGS];
-  scores = [0, 0]; turn = 0; paused = false; inning = [0, 0]; onBoard = []; gameOver = false;
+  scores = [0, 0]; turn = 0; paused = true; inning = [0, 0]; onBoard = []; gameOver = false;
   $("startTitle").innerHTML = "Pocket<br>Cornhole";
   $("summary").classList.add("hide");
   $("startBody").classList.remove("hide");
