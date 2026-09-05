@@ -117,7 +117,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b30</div>
+  <div id="build">b31</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -147,7 +147,9 @@ var lastImpact = -1e9, deafUntil = 0;
 var down = 0, lastContact = 0, firstPos = null, lastPos = null;
 var roundT0 = 0, timers = [], poll = null, lastDot = null, impactMag = 0;
 var secondHit = 0;      // it came off and hit something else
-var lastQuiet = 0;          // last moment the phone was actually still
+var settled = false;    // the phone went quiet after the landing
+var firstContactAt = 0, liftAt = 0;
+var BRIEF_MS = 300;     // a bounce brushes the glass, it does not rest on it
 var points = 0, firstPx = null, lastPx = null;
 var impactZ = 1;          // how much of the hit went straight down through the glass
 var Z_MIN = 0.45;         // below this it came in sideways, so through the table
@@ -322,6 +324,7 @@ function onImpact(m, zShare){
   lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m; impactZ = zShare;
   plays++; hud();
   lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
+  settled = false; firstContactAt = 0; liftAt = 0;
   appealUntil = 0;
   pendingDot = null; pendingUntil = 0;
 
@@ -387,7 +390,13 @@ function verdict(){
   /* Held at the end, or felt late once the buzzing has started, is proof it is
      sitting there. A brief touch at the moment of impact and nothing after is
      what a bounce looks like, so that is the only case the thump decides. */
-  var on = certain || !flewOff;
+  /* A contact that brushed the glass and was gone, before the buzzing even
+     started, is a bounce. That comes from the screen, not from guessing at
+     what the accelerometer heard. */
+  var heldMs = (liftAt && firstContactAt) ? liftAt - firstContactAt : 0;
+  var brief = lastContact > 0 && down === 0 && heldMs > 0 && heldMs < BRIEF_MS
+              && (lastContact - roundT0) < BUZZ_AT[0];
+  var on = certain || !(flewOff || brief);
   var slid = firstPos && lastPos &&
              Math.hypot(lastPos.x - firstPos.x, lastPos.y - firstPos.y) > 12;
 
@@ -429,8 +438,9 @@ function verdict(){
     appealUntil = performance.now() + APPEAL_MS;
     $("why").textContent = flewOff
       ? "Touched " + zone(firstPos) + ", then landed somewhere else. Bounced off."
-      : slid ? "Hit " + zone(firstPos) + ", slid off the edge."
-             : "Touched " + zone(firstPos) + " and was gone. Bounced off.";
+      : brief ? "Only on the glass for " + Math.round(heldMs) + "ms. Bounced off."
+      : slid  ? "Hit " + zone(firstPos) + ", slid off the edge."
+              : "Touched " + zone(firstPos) + " and was gone. Bounced off.";
   }
   $("big").classList.add("on");
   hud();
@@ -443,17 +453,17 @@ function motion(ax, ay, az){
   var m = Math.sqrt(ax*ax + ay*ay + az*az);
   if (waiting) {
     var age = performance.now() - roundT0;
-    if (m < Math.max(0.05, ACC_THR * 0.35) * 0.5) lastQuiet = performance.now();
+    /* mark that the phone actually settled after the landing, rather than
+       demanding a silence quieter than the sensor's own noise floor */
+    if (age > BLANK_MS && m < Math.max(0.05, ACC_THR * 0.35)) settled = true;
     /* Landing on the table arrives through the table top, heavily damped, so
        it is always much softer than the direct hit. Listen well below the
        trigger, but still demand a fresh transient rather than ringdown. */
-    if (!secondHit && age > BLANK_MS && age < LISTEN_MS
-        && m > Math.max(0.05, ACC_THR * 0.35)
-        && performance.now() - lastQuiet < 130) secondHit = m;
+    if (!secondHit && settled && age < LISTEN_MS
+        && m > Math.max(0.05, ACC_THR * 0.35)) secondHit = m;
     return;                       // a round in flight is never restarted
   }
-  if (m > ACC_THR) { onImpact(m, Math.abs(az) / m); return; }
-  if (m < faint() * 0.5) lastQuiet = performance.now();
+  if (m > ACC_THR) onImpact(m, Math.abs(az) / m);
 }
 
 
@@ -486,7 +496,7 @@ function contact(t){
   lastPos = { x: +(t.clientX/innerWidth*100).toFixed(1),
               y: +(t.clientY/innerHeight*100).toFixed(1) };
   lastPx = { x: t.clientX, y: t.clientY };
-  if (!firstPos) { firstPos = lastPos; firstPx = lastPx; }
+  if (!firstPos) { firstPos = lastPos; firstPx = lastPx; firstContactAt = lastContact; }
   if (!waiting && performance.now() < appealUntil) appeal(lastPx, lastPos);
   else if (!waiting && pendingDot && performance.now() < pendingUntil) placeBag(lastPx, lastPos);
   var lv = $("live");
@@ -529,6 +539,7 @@ function lift(e){
   /* A packet being lifted drags across the glass on the way up, and that jolt
      would otherwise open a fresh round and score the same bag twice. A packet
      the screen simply lost never moves, so it does not blind anything. */
+  if (down === 0 && waiting) liftAt = performance.now();
   if (down === 0 && touchMoved > PICKUP_PX) {
     deafUntil = Math.max(deafUntil, performance.now() + PICKUP_TAIL);
     appealUntil = 0;
