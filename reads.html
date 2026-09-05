@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>reads it?</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0a0a0a; color: #666;
+    font: 600 20px/1.2 -apple-system, system-ui, sans-serif;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .06s linear;
+  }
+  body.hit { background: #00c853; color: #000; }
+  body.off { background: #ff6d00; color: #000; }
+  #word { font-size: 15vw; font-weight: 800; letter-spacing: -.03em; z-index: 2; text-align: center; }
+  #sub { position: fixed; bottom: 8vh; left: 0; right: 0; text-align: center; font-size: 5vw; z-index: 2; }
+  #tally { position: fixed; top: calc(2vh + env(safe-area-inset-top)); left: 0; right: 0;
+           text-align: center; font-size: 4vw; opacity: .5; z-index: 2; }
+  #spot { position: fixed; border: 6px solid #fff; border-radius: 50%;
+          transform: translate(-50%,-50%); display: none; z-index: 1; }
+  #ghost { position: fixed; width: 7vw; height: 7vw; margin: -3.5vw 0 0 -3.5vw;
+           border: 3px dashed #555; border-radius: 50%; display: none; z-index: 1; }
+</style>
+</head>
+<body>
+  <div id="ghost"></div>
+  <div id="spot"></div>
+  <div id="word">tap to arm</div>
+  <div id="sub"></div>
+  <div id="tally"></div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(i){ return document.getElementById(i); };
+var armed = false, hits = 0, ctx = null, downAt = 0, startXY = null;
+
+function beep(freq, ms){
+  if (!ctx) return;
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = freq; o.type = "square";
+  g.gain.value = 0.25; o.connect(g); g.connect(ctx.destination);
+  o.start(); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + ms/1000);
+  o.stop(ctx.currentTime + ms/1000);
+}
+function buzz(p){ if (navigator.vibrate) navigator.vibrate(p); }
+
+function arm(){
+  armed = true;
+  try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(e){}
+  $("word").textContent = "throw";
+  $("word").style.fontSize = "10vw";
+  document.body.style.color = "#555";
+}
+
+document.addEventListener("touchstart", function(e){
+  e.preventDefault();
+  if (!armed) { arm(); return; }
+  var t = e.changedTouches[0];
+  var r = Math.max(t.radiusX||0, t.radiusY||0);
+  hits++;
+  downAt = performance.now();
+  startXY = [t.clientX, t.clientY];
+
+  document.body.className = "hit";
+  $("word").textContent = "YES";
+  $("word").style.fontSize = "22vw";
+  $("sub").textContent = Math.round(t.clientX/innerWidth*100) + "%  " +
+                         Math.round(t.clientY/innerHeight*100) + "%" +
+                         (r ? "   size " + Math.round(r) : "");
+  $("tally").textContent = hits;
+
+  var s = $("spot"), d = Math.max(70, r*2);
+  s.style.cssText = "left:"+t.clientX+"px;top:"+t.clientY+"px;width:"+d+"px;height:"+d+"px;display:block";
+  $("ghost").style.display = "none";
+
+  beep(880, 120); buzz(60);
+}, {passive:false});
+
+function up(e){
+  e.preventDefault();
+  if (!armed || !startXY) return;
+  var t = e.changedTouches[0];
+  var held = performance.now() - downAt;
+  var slid = Math.hypot(t.clientX - startXY[0], t.clientY - startXY[1]);
+  startXY = null;
+
+  $("spot").style.display = "none";
+  var g = $("ghost");
+  g.style.left = t.clientX + "px"; g.style.top = t.clientY + "px"; g.style.display = "block";
+
+  document.body.className = "off";
+  $("word").textContent = slid > 60 ? "SLID OFF" : "LOST IT";
+  $("word").style.fontSize = "13vw";
+  $("sub").textContent = Math.round(held) + " ms   moved " + Math.round(slid) + " px";
+  beep(220, 200); buzz([40,40,40]);
+
+  setTimeout(function(){
+    if (startXY) return;
+    document.body.className = "";
+    $("word").textContent = "throw";
+    $("word").style.fontSize = "10vw";
+    $("sub").textContent = "";
+  }, 1800);
+}
+document.addEventListener("touchend", up, {passive:false});
+document.addEventListener("touchcancel", up, {passive:false});
+document.addEventListener("click", function(){ if (!armed) arm(); });
+})();
+</script>
+</body>
+</html>
