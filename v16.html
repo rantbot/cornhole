@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>packet cornhole</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Packet Cornhole","short_name":"Packet","display":"fullscreen","orientation":"portrait","background_color":"%230d0d0d","theme_color":"%230d0d0d","start_url":"."}'>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0d0d0d; color: #888;
+    font: 700 18px -apple-system, system-ui, sans-serif;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    transition: background .05s linear;
+  }
+  body.settle { background: #15306b; }
+  body.win    { background: #0b4a26; }
+  body.lose   { background: #5c1414; }
+  body.miss   { background: #4a3c10; }
+
+  /* everything above the play surface must not swallow a touch */
+  #dots, #big, #hud, #why { pointer-events: none; }
+
+  /* the board, inset from the edges where detection is least reliable */
+  #board { position: fixed; left: 7%; right: 7%; top: 9%; bottom: 9%; z-index: 0;
+           border: 2px solid #2f3a45; border-radius: 16px; pointer-events: none;
+           background: #121820; }
+  #hole  { position: fixed; left: 50%; top: 30%; width: 30%; z-index: 0;
+           aspect-ratio: 1; transform: translate(-50%,-50%); border-radius: 50%;
+           background: #05070a; border: 2px solid #3d4c5a; pointer-events: none; }
+  #hole::after { content: "3"; position: absolute; inset: 0; display: flex;
+                 align-items: center; justify-content: center;
+                 font: 800 34px -apple-system, system-ui, sans-serif; color: #2b3742; }
+  #dots { position: fixed; inset: 0; z-index: 1; }
+  .dot { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px;
+         border-radius: 50%; opacity: .8; }
+  .dot.w { background: #00e676; }
+  .dot.h { background: #ffd54f; }
+  .dot.l { background: #ff5252; }
+  /* a win we could not actually see, drawn hollow so it is not mistaken for one we did */
+  .dot.g { background: transparent; border: 3px solid #00e676; }
+  .dot.last { box-shadow: 0 0 0 3px #fff; opacity: 1; }
+
+  #big { position: fixed; inset: 0; z-index: 2; display: flex;
+         align-items: center; justify-content: center;
+         font-size: 21vw; font-weight: 800; letter-spacing: -.04em;
+         color: #fff; opacity: 0; transition: opacity .1s linear; }
+  #big.on { opacity: .93; }
+  #hud { position: fixed; top: calc(1.4vh + env(safe-area-inset-top)); left: 0; right: 0;
+         text-align: center; z-index: 3; font-size: 15px; color: #aaa; }
+  #why { position: fixed; bottom: calc(3.5vh + env(safe-area-inset-bottom)); left: 0; right: 0;
+         text-align: center; z-index: 3; padding: 0 20px; color: #e8e8e8;
+         font: 600 16px/1.35 -apple-system, system-ui, sans-serif; }
+
+  /* two small corner controls, well clear of where a packet lands */
+  .corner { position: fixed; top: calc(0.8vh + env(safe-area-inset-top));
+            width: 44px; height: 44px; border-radius: 50%; z-index: 4;
+            background: #232323; color: #999; border: 1px solid #383838;
+            font: 600 11px -apple-system, system-ui, sans-serif; }
+  #oob { position: fixed; top: 0; left: 0; right: 0; height: 92px; z-index: 0;
+         pointer-events: none; display: none;
+         background: repeating-linear-gradient(45deg,#241010 0 10px,#1a0c0c 10px 20px);
+         border-bottom: 2px solid #7a2222; }
+  #oob.on { display: block; }
+  #install { position: fixed; bottom: calc(11vh + env(safe-area-inset-bottom));
+             left: 0; right: 0; text-align: center; z-index: 3; padding: 0 20px;
+             pointer-events: none; color: #f0c674;
+             font: 600 13px/1.4 -apple-system, system-ui, sans-serif; }
+  #clear { left: 8px; }
+  #cut   { right: 8px; }
+  #trig  { right: 58px; }
+</style>
+</head>
+<body>
+  <div id="oob"></div>
+  <div id="board"></div>
+  <div id="hole"></div>
+  <div id="dots"></div>
+  <div id="big"></div>
+  <div id="hud">tap to start</div>
+  <div id="why"></div>
+  <div id="install"></div>
+  <button class="corner" id="clear">clear</button>
+  <button class="corner" id="trig">.35</button>
+  <button class="corner" id="cut">550</button>
+
+<script>
+(function(){
+"use strict";
+var $ = function(i){ return document.getElementById(i); };
+
+var LISTEN_MS  = 420;   // quiet window, listening for it landing somewhere else
+var BLANK_MS   = 90;    // the first hit rings for a moment, ignore that
+var BUZZ_AT    = [420, 620, 820, 1040, 1270];
+var VERDICT_AT = 1550;
+var LATE_FROM  = 550;
+var EXTRA_BUZZ = [0, 350, 700], EXTRA_FOR = 1100;
+var ARM_QUIET  = 2000;          // silent, no countdown on screen
+var BUZZ_DUR   = 300, BUZZ_TAIL = 200, ACC_THR = 0.35;
+var FAINT      = 0.10;  // too soft to be a direct hit, but something happened
+var MISS_WAIT  = 700;   // if nothing follows a faint knock, it landed off the phone
+var THRS = [0.10, 0.15, 0.25, 0.35, 0.50];
+
+var armed = false, ctx = null, waiting = false, extended = false;
+var wins = 0, plays = 0;
+var lastImpact = -1e9, deafUntil = 0;
+var down = 0, lastContact = 0, firstPos = null, lastPos = null;
+var roundT0 = 0, timers = [], poll = null, lastDot = null, impactMag = 0;
+var secondHit = 0;      // it came off and hit something else
+var misses = 0, missAt = 0, missTimer = null;
+var points = 0, firstPx = null;
+
+function beep(f, ms){
+  if (!ctx) return;
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "square"; o.frequency.value = f; g.gain.value = .22;
+  o.connect(g); g.connect(ctx.destination); o.start();
+  g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + ms/1000);
+  o.stop(ctx.currentTime + ms/1000);
+}
+function shake(){
+  if (!navigator.vibrate) return;
+  navigator.vibrate([45,35,45,35,45,35,60]);
+  deafUntil = performance.now() + BUZZ_DUR + BUZZ_TAIL;
+}
+function shakeHard(){
+  if (!navigator.vibrate) return;
+  navigator.vibrate(500);
+  deafUntil = performance.now() + 500 + BUZZ_TAIL;
+}
+function rt(fn, ms){ timers.push(setTimeout(fn, ms)); }
+function clearRound(){ timers.forEach(clearTimeout); timers = []; clearInterval(poll); poll = null; }
+
+/* which part of the board it came down on */
+function target(px){
+  if (!px) return "unknown";
+  var W = innerWidth, H = innerHeight;
+  var hx = W * 0.5, hy = H * 0.30, hr = W * 0.15;
+  if (Math.hypot(px.x - hx, px.y - hy) <= hr) return "hole";
+  var inBoard = px.x > W*0.07 && px.x < W*0.93 && px.y > H*0.09 && px.y < H*0.91;
+  return inBoard ? "board" : "outside";
+}
+
+function zone(p){
+  if (!p) return "nowhere";
+  var h = p.x < 34 ? "left" : p.x < 67 ? "" : "right";
+  var v = p.y < 34 ? "top" : p.y < 67 ? "" : "bottom";
+  if (!h && !v) return "the middle";
+  return "the " + (v && h ? v + " " + h : v || h);
+}
+function hud(){
+  $("hud").textContent = (plays || misses)
+    ? points + " pts / " + (plays + misses) + " thrown"
+    : "throw";
+}
+
+function clean(){
+  return (window.matchMedia &&
+          window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches)
+      || navigator.standalone === true
+      || !!document.fullscreenElement || !!document.webkitFullscreenElement;
+}
+function checkChrome(){
+  var ok = clean();
+  $("oob").classList.toggle("on", !ok);
+  $("install").textContent = ok ? ""
+    : (/iPhone|iPad|iPod/.test(navigator.userAgent)
+        ? "Share, then Add to Home Screen. Open it from that icon for the whole screen."
+        : "Browser menu, then Add to Home Screen. Open it from that icon for the whole screen.");
+}
+addEventListener("resize", function(){ setTimeout(checkChrome, 120); });
+
+function idle(){
+  waiting = false; clearRound();
+  document.body.className = "";
+  $("big").classList.remove("on");
+  hud();
+}
+
+function plot(p, win, guessed){
+  if (!p) return;
+  if (lastDot) lastDot.classList.remove("last");
+  var d = document.createElement("div");
+  d.className = "dot last " + (guessed ? "g" : win ? "w" : "l");
+  d.style.left = p.x + "%"; d.style.top = p.y + "%";
+  $("dots").appendChild(d);
+  lastDot = d;
+}
+
+/* ---- round ---- */
+function onImpact(m){
+  var t = performance.now();
+  if (waiting || t < deafUntil || t - lastImpact < 900) return;
+  clearRound();
+  lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m;
+  plays++; hud();
+  lastContact = 0; firstPos = null; lastPos = null; secondHit = 0;
+  cancelMiss();
+
+  document.body.className = "settle";
+  $("big").textContent = "…"; $("big").classList.add("on");
+  $("why").textContent = "";
+  beep(440, 60);
+
+  BUZZ_AT.forEach(function(ms){ rt(shake, ms); });
+  rt(verdict, VERDICT_AT);
+  rt(function(){ if (waiting) idle(); }, VERDICT_AT + EXTRA_FOR + 2500);
+
+  poll = setInterval(function(){
+    if (!waiting) { clearInterval(poll); return; }
+    if (down > 0 || (lastContact && lastContact - roundT0 >= LATE_FROM)) verdict();
+  }, 40);
+}
+
+function verdict(){
+  if (!waiting) return;
+
+  /* Only a round that has felt nothing at all is worth more buzzing. One that
+     touched and went quiet is a real bounce, so it gets called now. */
+  if (!lastContact && !extended && !secondHit) {
+    extended = true;
+    timers.forEach(clearTimeout); timers = [];
+    $("why").textContent = "still looking";
+    EXTRA_BUZZ.forEach(function(ms){ rt(shakeHard, ms); });
+    rt(verdict, EXTRA_FOR);
+    return;
+  }
+
+  waiting = false; clearRound();
+  lastImpact = performance.now();
+
+  /* No contact at all is no evidence either way. Something hit the phone and
+     nothing was ever seen leaving it, so assume it stayed. */
+  /* A second thump right after the first means it left and landed elsewhere.
+     That is evidence, so it outranks the guess. */
+  var flewOff = secondHit > 0;
+  var guessed = !lastContact && !flewOff;
+  var on = !flewOff && (guessed || down > 0 || (lastContact - roundT0 >= LATE_FROM));
+  var slid = firstPos && lastPos &&
+             Math.hypot(lastPos.x - firstPos.x, lastPos.y - firstPos.y) > 12;
+
+  plot(firstPos || { x: 50, y: 50 }, on, guessed);
+
+  if (on) {
+    wins++;
+    var where = guessed ? "unknown" : target(firstPx);
+    var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
+    points += got;
+    document.body.className = "win";
+    $("big").textContent = String(got);
+    $("why").textContent =
+        where === "hole"    ? "In the hole."
+      : where === "outside" ? "On the phone but off the board. No points."
+      : guessed             ? "Stayed on, though the screen never saw where. One point."
+      : slid                ? "Landed on the board in " + zone(firstPos) + ", settled in " + zone(lastPos) + "."
+                            : "On the board in " + zone(firstPos) + ".";
+    if (lastDot) lastDot.className = "dot last " + (guessed ? "g" : where === "hole" ? "h" : "w");
+  } else {
+    document.body.className = "lose";
+    $("big").textContent = "0";
+    $("why").textContent = flewOff
+      ? "Hit at " + impactMag.toFixed(2) + ", then landed somewhere else at " + secondHit.toFixed(2) + "."
+      : slid ? "Hit " + zone(firstPos) + ", slid off the edge."
+             : "Hit " + zone(firstPos) + ", then went quiet.";
+  }
+  $("big").classList.add("on");
+  hud();
+  beep(on ? 760 : 200, 100);
+  rt(idle, 1500);
+}
+
+/* ---- sensors ---- */
+function motion(ax, ay, az){
+  var m = Math.sqrt(ax*ax + ay*ay + az*az);
+  if (waiting) {
+    var age = performance.now() - roundT0;
+    if (!secondHit && age > BLANK_MS && age < LISTEN_MS && m > ACC_THR) secondHit = m;
+    return;                       // a round in flight is never restarted
+  }
+  if (m > ACC_THR) { cancelMiss(); onImpact(m); return; }
+  if (m > FAINT) watchMiss(m);
+}
+
+function cancelMiss(){ clearTimeout(missTimer); missTimer = null; missAt = 0; }
+
+/* Too soft to have hit the phone, but the table carried something. If nothing
+   lands on the screen and no real impact follows, it went wide. */
+function watchMiss(m){
+  var t = performance.now();
+  if (waiting || missTimer || t < deafUntil) return;
+  if (t - lastImpact < 900) return;
+  missAt = t;
+  missTimer = setTimeout(function(){
+    missTimer = null;
+    if (waiting || lastContact > missAt || down > 0) return;
+    misses++; hud();
+    document.body.className = "miss";
+    $("big").textContent = "MISS"; $("big").classList.add("on");
+    $("why").textContent = "Only a faint knock at " + m.toFixed(2) + " and nothing on the screen.";
+    beep(300, 90);
+    setTimeout(function(){ if (!waiting) idle(); }, 1400);
+  }, MISS_WAIT);
+}
+function startMotion(){
+  if (window.LinearAccelerationSensor) {
+    try {
+      var a = new LinearAccelerationSensor({frequency:200});
+      a.onreading = function(){ motion(a.x, a.y, a.z); };
+      a.onerror = dm; a.start(); return;
+    } catch(e){}
+  }
+  dm();
+}
+function dm(){
+  function bind(){
+    addEventListener("devicemotion", function(e){
+      var a = e.acceleration;
+      if (!a || a.x === null) return;
+      motion(a.x||0, a.y||0, a.z||0);
+    });
+  }
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission)
+    DeviceMotionEvent.requestPermission().then(bind).catch(function(){});
+  else bind();
+}
+
+/* ---- touch ---- */
+function contact(t){
+  lastContact = performance.now();
+  lastPos = { x: +(t.clientX/innerWidth*100).toFixed(1),
+              y: +(t.clientY/innerHeight*100).toFixed(1) };
+  if (!firstPos) { firstPos = lastPos; firstPx = { x: t.clientX, y: t.clientY }; }
+}
+document.addEventListener("touchstart", function(e){
+  if (e.target.tagName === "BUTTON") return;
+  e.preventDefault();
+  if (!armed) {
+    armed = true;
+    try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
+    startMotion();
+    goFullscreen();
+    /* quiet for a moment so your finger leaving the glass is not a throw */
+    deafUntil = performance.now() + ARM_QUIET;
+    idle();
+    if (!navigator.vibrate) $("why").textContent = "no vibrate api on this browser";
+    return;
+  }
+  down = e.touches.length;
+  contact(e.changedTouches[0]);
+}, {passive:false});
+document.addEventListener("touchmove", function(e){
+  if (e.target.tagName === "BUTTON") return;
+  e.preventDefault();
+  if (waiting) contact(e.changedTouches[0]);
+}, {passive:false});
+function lift(e){
+  if (e.target.tagName === "BUTTON") return;
+  e.preventDefault();
+  down = e.touches.length;
+}
+document.addEventListener("touchend", lift, {passive:false});
+document.addEventListener("touchcancel", lift, {passive:false});
+
+/* ---- corners ---- */
+function goFullscreen(){
+  var el = document.documentElement;
+  var fs = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (fs) { try { var p = fs.call(el); if (p && p.then) p.then(checkChrome, checkChrome); } catch(err){} }
+  setTimeout(checkChrome, 400);
+}
+checkChrome();
+
+$("clear").addEventListener("click", function(e){
+  e.stopPropagation();
+  goFullscreen();
+  $("dots").innerHTML = ""; lastDot = null;
+  wins = 0; plays = 0; points = 0; misses = 0; hud();
+  $("why").textContent = "";
+});
+$("trig").addEventListener("click", function(e){
+  e.stopPropagation();
+  ACC_THR = THRS[(THRS.indexOf(ACC_THR) + 1) % THRS.length];
+  this.textContent = ACC_THR.toFixed(2).replace("0.", ".");
+});
+var CUTS = [0, 150, 300, 400, 550, 700, 900];
+$("cut").addEventListener("click", function(e){
+  e.stopPropagation();
+  LATE_FROM = CUTS[(CUTS.indexOf(LATE_FROM) + 1) % CUTS.length];
+  this.textContent = LATE_FROM === 0 ? "any" : LATE_FROM;
+});
+})();
+</script>
+</body>
+</html>
