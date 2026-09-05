@@ -29,7 +29,7 @@
   #dots, #big, #hud, #why { pointer-events: none; }
 
   /* the board, inset from the edges where detection is least reliable */
-  #board { position: fixed; left: 7%; right: 7%; top: 9%; bottom: 9%; z-index: 0;
+  #board { position: fixed; left: 3%; right: 3%; top: 5%; bottom: 5%; z-index: 0;
            border: 2px solid #2f3a45; border-radius: 16px; pointer-events: none;
            background: #121820; }
   #hole  { position: fixed; left: 50%; top: 30%; width: 30%; z-index: 0;
@@ -43,6 +43,9 @@
          border-radius: 50%; opacity: .8; }
   .dot.w { background: #00e676; }
   .dot.h { background: #ffd54f; }
+  #live { position: fixed; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+          border: 3px solid #fff; border-radius: 50%; z-index: 2;
+          pointer-events: none; display: none; }
   .dot.l { background: #ff5252; }
   /* a win we could not actually see, drawn hollow so it is not mistaken for one we did */
   .dot.g { background: transparent; border: 3px solid #00e676; }
@@ -83,6 +86,7 @@
   <div id="board"></div>
   <div id="hole"></div>
   <div id="dots"></div>
+  <div id="live"></div>
   <div id="big"></div>
   <div id="hud">tap to start</div>
   <div id="why"></div>
@@ -104,7 +108,7 @@ var LATE_FROM  = 550;
 var EXTRA_BUZZ = [0, 350, 700], EXTRA_FOR = 1100;
 var ARM_QUIET  = 2000;          // silent, no countdown on screen
 var BUZZ_DUR   = 300, BUZZ_TAIL = 200, ACC_THR = 0.35;
-var FAINT      = 0.10;  // too soft to be a direct hit, but something happened
+function faint(){ return ACC_THR * 0.55; }  // scales with the trigger
 var MISS_WAIT  = 700;   // if nothing follows a faint knock, it landed off the phone
 var THRS = [0.10, 0.15, 0.25, 0.35, 0.50];
 
@@ -144,7 +148,7 @@ function target(px){
   var W = innerWidth, H = innerHeight;
   var hx = W * 0.5, hy = H * 0.30, hr = W * 0.15;
   if (Math.hypot(px.x - hx, px.y - hy) <= hr) return "hole";
-  var inBoard = px.x > W*0.07 && px.x < W*0.93 && px.y > H*0.09 && px.y < H*0.91;
+  var inBoard = px.x > W*0.03 && px.x < W*0.97 && px.y > H*0.05 && px.y < H*0.95;
   return inBoard ? "board" : "outside";
 }
 
@@ -179,6 +183,7 @@ addEventListener("resize", function(){ setTimeout(checkChrome, 120); });
 
 function idle(){
   waiting = false; clearRound();
+  $("live").style.display = "none";
   document.body.className = "";
   $("big").classList.remove("on");
   hud();
@@ -285,7 +290,7 @@ function motion(ax, ay, az){
     return;                       // a round in flight is never restarted
   }
   if (m > ACC_THR) { cancelMiss(); onImpact(m); return; }
-  if (m > FAINT) watchMiss(m);
+  if (m > faint()) watchMiss(m);
 }
 
 function cancelMiss(){ clearTimeout(missTimer); missTimer = null; missAt = 0; }
@@ -337,6 +342,8 @@ function contact(t){
   lastPos = { x: +(t.clientX/innerWidth*100).toFixed(1),
               y: +(t.clientY/innerHeight*100).toFixed(1) };
   if (!firstPos) { firstPos = lastPos; firstPx = { x: t.clientX, y: t.clientY }; }
+  var lv = $("live");
+  lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px"; lv.style.display = "block";
 }
 document.addEventListener("touchstart", function(e){
   if (e.target.tagName === "BUTTON") return;
