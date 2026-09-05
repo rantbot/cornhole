@@ -42,8 +42,9 @@
     --gold:   #F0B429;
     --bad:    #C0392B;
 
-    --turn:     #2F7FC9;
-    --turn-lit: #7FBBF0;
+    --turn:      #2F7FC9;
+    --turn-lit:  #7FBBF0;
+    --turn-glow: rgba(47,127,201,.55);
     --line:   rgba(244,239,228,.13);
     --line-2: rgba(244,239,228,.26);
     --lift:   0 16px 36px -14px rgba(0,0,0,.85);
@@ -52,21 +53,22 @@
 
     /* one family, six sizes, nothing between */
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --t-xs: 11px; --t-sm: 13px; --t-md: 15px;
-    --t-lg: 22px; --t-xl: 27px; --t-2xl: 42px;
+    --t-xs: 13px; --t-sm: 15px; --t-md: 17px;
+    --t-lg: 26px; --t-xl: 46px; --t-2xl: 44px;
 
-    --rail-h: 15%;
+    --rail-h: 17%;
     --foot-h: 14%;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; height: 100%; overflow: hidden; background: var(--ink);
+    margin: 0; height: 100%; overflow: hidden;
+    background: radial-gradient(140% 60% at 50% 50%, #12202C 0%, #050A0F 100%);
     color: var(--chalk); font-family: var(--sans);
     touch-action: none; overscroll-behavior: none;
     -webkit-user-select: none; user-select: none;
   }
-  html.turn0 { --turn: var(--p1); --turn-lit: var(--p1-lit); }
-  html.turn1 { --turn: var(--p2); --turn-lit: var(--p2-lit); }
+  html.turn0 { --turn: var(--p1); --turn-lit: var(--p1-lit); --turn-glow: rgba(47,127,201,.55); }
+  html.turn1 { --turn: var(--p2); --turn-lit: var(--p2-lit); --turn-glow: rgba(210,98,28,.55); }
   button { font-family: var(--sans); }
   button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
@@ -89,36 +91,44 @@
     transition: box-shadow .25s ease, filter .2s ease;
     /* the painted frame carries whose turn it is */
     box-shadow: 0 0 0 7px var(--turn), 0 0 0 9px rgba(0,0,0,.6),
+                0 0 34px 4px var(--turn-glow),
                 0 16px 30px -12px rgba(0,0,0,.9),
                 inset 0 0 70px rgba(60,28,4,.30);
+    /* fine cathedral grain running the length of the board, several passes at
+       different spacings so it never reads as stripes */
     background:
-      repeating-linear-gradient(91deg, rgba(88,52,18,.13) 0 1px, transparent 1px 6px),
-      repeating-linear-gradient(89deg, rgba(255,236,205,.10) 0 1px, transparent 1px 19px),
-      linear-gradient(102deg, rgba(255,255,255,.10) 0%, rgba(0,0,0,.10) 55%, rgba(0,0,0,.20) 100%),
-      linear-gradient(180deg, var(--ply-1) 0%, var(--ply-2) 52%, var(--ply-3) 100%);
+      repeating-linear-gradient(90.6deg, rgba(70,40,12,.07) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(89.4deg, rgba(255,238,206,.06) 0 1px, transparent 1px 11px),
+      repeating-linear-gradient(90.2deg, rgba(70,40,12,.05) 0 2px, transparent 2px 27px),
+      linear-gradient(101deg, rgba(255,255,255,.07) 0%, rgba(0,0,0,.07) 58%, rgba(0,0,0,.16) 100%),
+      linear-gradient(176deg, var(--ply-1) 0%, var(--ply-2) 54%, var(--ply-3) 100%);
     transition: filter .2s ease;
   }
-  #board::after {                       /* plank seams, softened */
-    content: ""; position: absolute; inset: 0;
+  /* the satin poly finish, a soft sheen raked across the surface */
+  #board::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
     background:
-      repeating-linear-gradient(180deg,
-        transparent 0 calc(20% - 3px),
-        rgba(255,238,210,.07) calc(20% - 3px) calc(20% - 1px),
-        rgba(74,42,12,.30)    calc(20% - 1px) calc(20% + 1px),
-        transparent           calc(20% + 1px) 20%),
-      radial-gradient(120% 78% at 50% 34%, transparent 40%, rgba(38,18,2,.34) 100%);
+      linear-gradient(107deg, transparent 6%, rgba(255,250,238,.20) 21%,
+                              rgba(255,250,238,.05) 34%, transparent 47%),
+      linear-gradient(107deg, transparent 58%, rgba(255,250,238,.11) 70%, transparent 80%),
+      radial-gradient(125% 80% at 50% 32%, transparent 42%, rgba(34,16,2,.40) 100%);
   }
-  #board::before {                      /* a hairline of light along the top edge */
-    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
-    background: rgba(255,246,228,.22);
+  #board::before {                      /* the painted pinstripe */
+    content: ""; position: absolute; inset: 9px; border-radius: 2px;
+    border: 2px solid rgba(28,52,74,.55);
+    box-shadow: inset 0 0 0 1px rgba(255,246,228,.16), 0 0 0 1px rgba(255,246,228,.10);
   }
   #hole {
     position: fixed; left: 50%; top: 44%; width: 31%; aspect-ratio: 1; z-index: 1;
     transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none;
-    background: radial-gradient(circle at 50% 30%, #2A1B0B 0%, #170E05 44%, var(--void) 100%);
-    box-shadow: inset 0 10px 18px rgba(0,0,0,.95),
-                inset 0 -4px 9px rgba(214,165,102,.34),
-                0 2px 0 rgba(255,240,214,.14);
+    background: radial-gradient(circle at 50% 26%, #2E1E0C 0%, #150C04 40%, var(--void) 100%);
+    /* the sanded edge of the cut, then the ply layers, then the dark below */
+    box-shadow: 0 0 0 1px rgba(255,244,220,.30),
+                0 0 0 3px rgba(150,104,52,.55),
+                0 0 0 4px rgba(64,38,12,.55),
+                inset 0 11px 17px rgba(0,0,0,.95),
+                inset 0 -5px 10px rgba(224,178,116,.30),
+                0 0 26px 3px rgba(0,0,0,.5);
   }
 
   /* ---------- bags ---------- */
@@ -166,43 +176,64 @@
     position: fixed; top: 0; left: 0; right: 0; height: var(--rail-h); z-index: 6;
     padding: calc(3px + env(safe-area-inset-top)) 10px 6px;
     display: flex; flex-direction: column; justify-content: center; gap: 5px;
-    background: linear-gradient(180deg, var(--panel), var(--rail));
-    box-shadow: 0 3px 0 rgba(0,0,0,.3);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.10) 0 2px, transparent 2px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, #22323F 0%, #16232E 45%, #0E1821 100%);
+    box-shadow: 0 4px 0 rgba(0,0,0,.5), inset 0 -1px 0 rgba(0,0,0,.6);
     pointer-events: none;
   }
+  /* bolt heads, so the deck reads as a panel that was screwed down */
+  #hud::before, #hud::after, #foot::before, #foot::after {
+    content: ""; position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #7B8C99, #2B3844 62%, #131C25);
+    box-shadow: 0 1px 1px rgba(0,0,0,.7);
+  }
+  #hud::before { left: 7px; bottom: 7px; }
+  #hud::after  { right: 7px; bottom: 7px; }
+  #foot::before { left: 7px; top: 7px; }
+  #foot::after  { right: 7px; top: 7px; }
   #scores { display: flex; align-items: stretch; justify-content: center; gap: 8px; }
-  #vs { align-self: center; font-size: var(--t-xs); font-weight: 800;
-        color: var(--chalk-3); letter-spacing: .1em; }
+  #vs { align-self: stretch; width: 3px; border-radius: 2px;
+        background: linear-gradient(180deg, transparent, var(--turn), transparent);
+        box-shadow: 0 0 10px var(--turn); }
   .pl {
-    flex: 1 1 0; max-width: 42%; padding: 5px 11px 6px; border-radius: var(--r-sm);
-    background: rgba(244,239,228,.06); border: 1.5px solid transparent;
+    position: relative; overflow: hidden;
+    flex: 1 1 0; max-width: 44%; padding: 7px 13px 8px; border-radius: var(--r-sm);
+    background: #050D14; border: 1.5px solid #1F2C38;
+    box-shadow: inset 0 2px 7px rgba(0,0,0,.9);
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    opacity: .3; transition: opacity .2s ease, background .2s ease, border-color .2s ease;
+    opacity: .55; transition: opacity .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
   .pl .who { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
-  .pl b { font-size: var(--t-xs); font-weight: 700; white-space: nowrap; }
   /* what is sitting on the board this round, before the two sides cancel */
-  .pl .live { font-size: var(--t-xs); font-weight: 800; color: var(--gold); }
+  .pl .live { font-size: var(--t-sm); font-weight: 800; color: var(--gold); }
   .pl .n {
-    font-size: var(--t-xl); font-weight: 800; letter-spacing: -.045em; line-height: 1;
+    font-size: var(--t-xl); font-weight: 800; letter-spacing: -.05em; line-height: .95;
     font-variant-numeric: tabular-nums; color: var(--chalk);
     transition: transform .18s cubic-bezier(.2,1.6,.4,1), color .18s ease;
   }
-  #p0 b { color: var(--p1-lit); }
-  #p1 b { color: var(--p2-lit); }
-  .pl.on b { color: #08151F; }
-  .pl.on .n { color: #FFFFFF; }
-  .pl.on .pips i { background: #FFFFFF; }
-  .pl.on .pips i.used { background: transparent; box-shadow: inset 0 0 0 2px rgba(8,21,31,.5); }
-  #p0.on { opacity: 1; background: var(--p1); border-color: var(--p1-lit); }
-  #p1.on { opacity: 1; background: var(--p2); border-color: var(--p2-lit); }
+  .pl.on .pips i { box-shadow: 0 0 8px currentColor; }
+  /* the scanlines of a cheap arcade readout */
+  .pl::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+               background: repeating-linear-gradient(180deg,
+                 rgba(255,255,255,.05) 0 1px, transparent 1px 3px); }
+  #p0 .n { color: var(--p1-lit); text-shadow: 0 0 14px rgba(47,127,201,.5); }
+  #p1 .n { color: var(--p2-lit); text-shadow: 0 0 14px rgba(210,98,28,.5); }
+  #p0.on { opacity: 1; border-color: var(--p1);
+           box-shadow: inset 0 2px 7px rgba(0,0,0,.9), 0 0 18px rgba(47,127,201,.55); }
+  #p1.on { opacity: 1; border-color: var(--p2);
+           box-shadow: inset 0 2px 7px rgba(0,0,0,.9), 0 0 18px rgba(210,98,28,.55); }
+  #p0.on .n { text-shadow: 0 0 8px var(--p1-lit), 0 0 26px rgba(47,127,201,.9); }
+  #p1.on .n { text-shadow: 0 0 8px var(--p2-lit), 0 0 26px rgba(210,98,28,.9); }
   .pl.bump .n { transform: scale(1.3); color: var(--gold); }
-  .pl .pips { display: flex; gap: 4px; align-self: center; }
-  .pl .pips i { width: 10px; height: 8px; border-radius: var(--r-xs); }
-  #p0 .pips i { background: var(--p1); }
-  #p1 .pips i { background: var(--p2); }
+  .pl .pips { display: flex; gap: 5px; align-self: center; }
+  .pl .pips i { width: 15px; height: 12px; border-radius: var(--r-xs); }
+  #p0 .pips i { background: var(--p1); color: var(--p1); }
+  #p1 .pips i { background: var(--p2); color: var(--p2); }
   .pl .pips i.used { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(244,239,228,.3); }
-  #ptsSub { text-align: center; font-size: var(--t-sm); font-weight: 700; color: var(--chalk-3); }
+  #ptsSub { text-align: center; font-size: var(--t-sm); font-weight: 800; color: var(--chalk-3);
+            letter-spacing: .01em; }
   #scores.solo #p1, #scores.solo #vs { display: none; }
   #scores.solo .pl { max-width: 62%; }
 
@@ -211,27 +242,42 @@
     position: fixed; left: 0; right: 0; bottom: 0; height: var(--foot-h); z-index: 6;
     padding: 0 8px calc(2px + env(safe-area-inset-bottom));
     display: flex; align-items: center; gap: 8px;
-    background: linear-gradient(0deg, var(--panel), var(--rail));
-    box-shadow: 0 -3px 0 rgba(0,0,0,.3);
+    background:
+      linear-gradient(0deg, rgba(255,255,255,.05) 0 2px, transparent 2px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px),
+      linear-gradient(0deg, #22323F 0%, #16232E 45%, #0E1821 100%);
+    box-shadow: 0 -4px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.09);
   }
   #foot button {
-    flex: none; min-width: 62px; padding: 13px 12px; border-radius: var(--r-md);
+    flex: none; min-width: 74px; padding: 14px 12px; border-radius: var(--r-md);
     background: rgba(244,239,228,.10); color: var(--chalk);
     border: 1px solid var(--line-2); font-size: var(--t-sm); font-weight: 700;
   }
   #why {
     flex: 1 1 auto; min-width: 0; text-align: center;
-    font-size: var(--t-md); font-weight: 700; line-height: 1.25; color: var(--chalk);
+    font-size: var(--t-md); font-weight: 800; line-height: 1.2; color: var(--chalk);
     letter-spacing: -.01em; pointer-events: none;
   }
   /* whose throw it is, in their own colour */
   #why.t0, #why.t1 {
-    align-self: stretch; margin: 9px 0; display: flex; align-items: center;
-    justify-content: center; border-radius: var(--r-md);
-    color: #0A1B2A; font-size: var(--t-lg); font-weight: 800; letter-spacing: -.02em;
+    position: relative; align-self: stretch; margin: 9px 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--r-sm); color: #08151F;
+    font-size: 30px; font-weight: 800; letter-spacing: -.03em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.35);
   }
-  #why.t0 { background: var(--p1-lit); }
-  #why.t1 { background: var(--p2-lit); }
+  /* the bulb strip along a lit marquee */
+  #why.t0::before, #why.t1::before, #why.t0::after, #why.t1::after {
+    content: ""; position: absolute; left: 8px; right: 8px; height: 5px;
+    background-image: radial-gradient(circle, rgba(255,255,255,.95) 42%, transparent 46%);
+    background-size: 15px 5px; background-repeat: repeat-x;
+  }
+  #why.t0::before, #why.t1::before { top: 5px; }
+  #why.t0::after,  #why.t1::after  { bottom: 5px; }
+  #why.t0 { background: linear-gradient(180deg, #A7D3F7, var(--p1-lit) 55%, #4E97D6);
+            box-shadow: 0 0 26px rgba(47,127,201,.85), inset 0 -3px 0 rgba(0,0,0,.22); }
+  #why.t1 { background: linear-gradient(180deg, #FFC79A, var(--p2-lit) 55%, #D9812F);
+            box-shadow: 0 0 26px rgba(210,98,28,.85), inset 0 -3px 0 rgba(0,0,0,.22); }
 
   /* ---------- the verdict, always on a plate ---------- */
   #big {
@@ -242,13 +288,15 @@
   #big.on { opacity: 1; }
   #big span {
     display: block; padding: 12px 30px 14px; border-radius: var(--r-md);
-    background: rgba(10,27,42,.92); border: 2px solid var(--line-2);
-    box-shadow: var(--lift);
-    font-size: 21vw; font-weight: 800; letter-spacing: -.05em; line-height: .92;
+    background: rgba(5,11,17,.94); border: 3px solid var(--line-2);
+    box-shadow: var(--lift), 0 0 40px rgba(0,0,0,.7);
+    text-transform: uppercase;
+    font-size: 24vw; font-weight: 800; letter-spacing: -.05em; line-height: .92;
     color: var(--chalk); font-variant-numeric: tabular-nums;
   }
-  #big.huge span { font-size: 11vw; letter-spacing: -.02em; padding: 14px 22px 15px; }
-  body.three #big span { background: rgba(58,40,4,.94); border-color: var(--gold); color: var(--gold); }
+  #big.huge span { font-size: 12.5vw; letter-spacing: -.02em; padding: 14px 22px 15px; }
+  body.three #big span { background: rgba(40,26,2,.95); border-color: var(--gold); color: #FFE9A8;
+                         text-shadow: 0 0 10px var(--gold), 0 0 34px rgba(240,180,41,.85); }
   body.lose  #big span { background: rgba(56,14,10,.94); border-color: var(--bad);  color: #FFC9C2; }
 
   body.win    #board { filter: saturate(1.15) brightness(1.10); }
@@ -287,15 +335,41 @@
   #start {
     flex-direction: column; gap: 20px; padding: 0 28px; text-align: center;
     background:
-      radial-gradient(120% 70% at 50% 34%, rgba(27,64,102,.55) 0%, transparent 72%),
-      linear-gradient(180deg, var(--rail) 0%, var(--ink) 100%);
+      radial-gradient(110% 55% at 50% 28%, rgba(240,180,41,.20) 0%, transparent 70%),
+      radial-gradient(120% 70% at 50% 40%, rgba(27,64,102,.5) 0%, transparent 74%),
+      linear-gradient(180deg, #10202C 0%, #050A0F 100%);
   }
   #start.gone { display: none; }
   #startTitle { margin: 0; font-size: var(--t-2xl); line-height: .96; font-weight: 800;
-                letter-spacing: -.045em; color: var(--chalk); }
+                letter-spacing: -.045em; color: #FFF4DC; text-transform: uppercase;
+                text-shadow: 0 0 12px rgba(240,180,41,.75), 0 0 40px rgba(240,180,41,.4),
+                             0 3px 0 rgba(0,0,0,.5); }
   #startBody  { margin: 0; max-width: 24ch; color: var(--chalk-2);
                 font-size: var(--t-md); font-weight: 500; line-height: 1.5; }
   #startFoot  { color: var(--chalk-3); font-size: var(--t-xs); font-weight: 500; }
+  #summary { width: 100%; max-width: 320px; }
+  #sumWon {
+    padding: 14px 16px 16px; border-radius: var(--r-lg); margin-bottom: 14px;
+    font-size: 38px; font-weight: 800; letter-spacing: -.04em; line-height: 1;
+    color: #08151F;
+  }
+  #sumWon small { display: block; margin-top: 6px; font-size: var(--t-sm);
+                  font-weight: 700; letter-spacing: 0; opacity: .72; }
+  #sumWon.none { background: rgba(244,239,228,.09); color: var(--chalk-2);
+                 border: 1.5px solid var(--line-2); font-size: 28px; }
+  #sumWon.w0 { background: var(--p1-lit); }
+  #sumWon.w1 { background: var(--p2-lit); }
+  #sumTable .row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 4px;
+    border-top: 1px solid var(--line);
+  }
+  #sumTable .row i { width: 20px; height: 16px; border-radius: var(--r-xs); flex: none; }
+  #sumR0 i { background: var(--p1); }
+  #sumR1 i { background: var(--p2); }
+  #sumTable .row b { flex: 1; text-align: left; font-size: var(--t-md);
+                     font-weight: 700; color: var(--chalk-2); }
+  #sumTable .row span { font-size: 34px; font-weight: 800; letter-spacing: -.04em;
+                        color: var(--chalk); font-variant-numeric: tabular-nums; }
   #modes { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; }
   #modes .btn { display: flex; align-items: center; gap: 14px; text-align: left; }
   #modes .btn svg { flex: none; width: 38px; height: 28px; }
@@ -311,7 +385,7 @@
   .hide { display: none !important; }
 
   #settings {
-    position: fixed; inset: 0; z-index: 10; display: none;
+    position: fixed; inset: 0; z-index: 12; display: none;
     align-items: center; justify-content: center; padding: 20px;
     background: rgba(6,14,22,.86); overflow-y: auto;
   }
@@ -393,35 +467,42 @@
   <div id="start">
     <h1 id="startTitle">Pocket<br>Cornhole</h1>
     <p id="startBody">Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.</p>
+    <div id="summary" class="hide">
+      <div id="sumWon"></div>
+      <div id="sumTable">
+        <div class="row" id="sumR0"><i></i><b>Player 1</b><span></span></div>
+        <div class="row" id="sumR1"><i></i><b>Player 2</b><span></span></div>
+      </div>
+    </div>
         <div id="modes">
       <button class="btn" id="m1"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="20" cy="9" r="5.4" fill="#5aa9ff"/><path d="M9.5 27c0-5.8 4.7-9.5 10.5-9.5S30.5 21.2 30.5 27z" fill="#5aa9ff"/></svg><div>Practice<span>one player</span></div></button>
       <button class="btn" id="m2"><svg viewBox="0 0 40 30" aria-hidden="true"><circle cx="12" cy="10" r="4.8" fill="#5aa9ff"/><path d="M2.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#5aa9ff"/><circle cx="28" cy="10" r="4.8" fill="#ff9d42"/><path d="M18.5 27c0-5.2 4.2-8.6 9.5-8.6s9.5 3.4 9.5 8.6z" fill="#ff9d42"/></svg><div>Head to head<span>two players</span></div></button>
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b54</div>
+    <div id="build">b60</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
     <div id="scores">
-      <div class="pl" id="p0"><span class="who"><b>Player 1</b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
-      <div id="vs">VS</div>
-      <div class="pl" id="p1"><span class="who"><b>Player 2</b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
+      <div class="pl" id="p0"><span class="who"><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
+      <div id="vs"></div>
+      <div class="pl" id="p1"><span class="who"><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
     </div>
     <span id="ptsSub"></span>
   </div>
   <div id="foot">
     <button id="clear">Exit</button>
     <div id="why"></div>
-    <button id="gear">Board</button>
+    <button id="gear">Settings</button>
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
 
   <div id="settings">
     <div class="sheet">
-      <h2>Your board</h2>
+      <h2>Settings</h2>
 
-      <h3>Wood</h3>
+      <h3>Board finish</h3>
       <div class="sw" id="swWood"></div>
 
       <h3>Bags</h3>
@@ -479,6 +560,12 @@ var firstPx = null, lastPx = null;
 var BAGS = 4, bags = [BAGS, BAGS], frame = 1;
 var scores = [0, 0], turn = 0, paused = false, players = 1;
 var inning = [0, 0];        // points on the board this round, before cancelling
+var PRACTICE_KEEP = 6;      // bags left lying on the board before the oldest is cleared
+/* Head to head banks points at the end of a round so the two sides can cancel.
+   Practice has nobody to cancel against, so it scores as you go. */
+function award(owner, n){
+  if (players === 1) scores[0] += n; else inning[owner] += n;
+}
 var onBoard = [];           // every bag lying there, so they can be knocked about
 var impactZ = 1;          // how much of the hit went straight down through the glass
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
@@ -598,7 +685,7 @@ function hud(){
     el.querySelector(".n").textContent = scores[n];
     var live = el.querySelector(".live");
     if (live) live.textContent = inning[n] > 0 ? "+" + inning[n] : "";
-    el.querySelector(".pips").innerHTML = pips;      /* both players, always */
+    el.querySelector(".pips").innerHTML = players === 1 ? "" : pips;
     el.classList.toggle("on", active);
   });
   var col = turn === 0 ? "--p1" : "--p2";
@@ -606,8 +693,8 @@ function hud(){
   for (var k = 0; k < bags[turn]; k++)
     stack += '<i style="background:var(' + col + ');transform:rotate(' +
              ((k * 37 % 13) - 6) + 'deg)"></i>';
-  $("ready").innerHTML = paused ? "" : stack;
-  $("ptsSub").textContent = "Round " + frame;
+  $("ready").innerHTML = (paused || players === 1) ? "" : stack;
+  $("ptsSub").textContent = players === 1 ? "Practice" : "Round " + frame;
 }
 function bumpScore(){
   var el = $("p" + turn);
@@ -645,9 +732,7 @@ function endFrame(){
   /* Cancellation. The two sides wipe each other out and only the difference
      is awarded, so a round can be worth nothing to anybody. */
   var diff = got[0] - got[1];
-  if (players === 1) scores[0] += got[0];
-  else if (diff > 0) scores[0] += diff;
-  else if (diff < 0) scores[1] += -diff;
+  if (diff > 0) scores[0] += diff; else if (diff < 0) scores[1] += -diff;
   appealUntil = 0; pendingDot = null;
   waiting = false; clearRound();
   document.body.className = "";
@@ -663,24 +748,20 @@ function endFrame(){
   turn = 0;
   hud();
 
-  if (players === 2) {
-    var lead = scores[0] === scores[1] ? "It is level at " + scores[0] + "."
-      : "Player " + (scores[0] > scores[1] ? 1 : 2) + " leads " +
-        Math.max(scores[0], scores[1]) + " to " + Math.min(scores[0], scores[1]) + ".";
-    $("startTitle").innerHTML = "End of<br>round " + (frame - 1);
-    $("startBody").textContent =
-      "Player 1 " + got[0] + " on the board, Player 2 " + got[1] + ". " +
-      (diff === 0 ? "They cancel out, so nobody scores. "
-                  : "Player " + (diff > 0 ? 1 : 2) + " takes " + Math.abs(diff) + ". ") + lead;
-    $("startFoot").textContent = "Clear the board, then Player 1 opens the next round.";
-  } else {
-    $("startTitle").innerHTML = "Round " + frame;
-    $("startBody").textContent = got[0] === 0
-      ? "No points that round. Still on " + scores[0] + "."
-      : got[0] + (got[0] === 1 ? " point" : " points") + " from four bags. " +
-        scores[0] + " in total.";
-    $("startFoot").textContent = "Collect the bags, then hands off the phone.";
-  }
+  $("startBody").classList.add("hide");
+  $("summary").classList.remove("hide");
+  $("startTitle").innerHTML = "Round " + (frame - 1);
+
+  var win = diff === 0 ? -1 : (diff > 0 ? 0 : 1);
+  $("sumWon").className = win < 0 ? "none" : "w" + win;
+  $("sumWon").innerHTML = win < 0
+    ? "No score<small>" + got[0] + " each, so they cancel out</small>"
+    : "Player " + (win + 1) + " +" + Math.abs(diff) +
+      "<small>" + got[0] + " on the board against " + got[1] + "</small>";
+  $("sumR0").querySelector("span").textContent = scores[0];
+  $("sumR1").querySelector("span").textContent = scores[1];
+  $("startFoot").textContent = "Clear the board. Player 1 throws first.";
+
   $("modes").classList.add("hide");
   $("startTap").classList.remove("hide");
   $("startTap").textContent = "Tap when ready";
@@ -712,7 +793,8 @@ function idle(){
       $("why").textContent = "Player " + (turn + 1);
       $("why").className = "t" + turn;
     } else {
-      $("why").textContent = bags[0] === 1 ? "Last bag" : bags[0] + " bags left";
+      $("why").textContent = plays === 0 ? "Throw a bag"
+        : scores[0] + (scores[0] === 1 ? " point" : " points") + " from " + plays + " throws";
     }
   }
   $("live").style.display = "none";
@@ -728,7 +810,7 @@ function appeal(px, pos){
   var where = target(px);
   if (where === "outside") return;
   var got = where === "hole" ? 3 : 1;
-  inning[turn] += got; wins++; bumpScore();
+  award(turn, got); wins++; bumpScore();
   plot(pos, where === "hole");
   document.body.className = where === "hole" ? "three" : "win";
   $("bigText").textContent = got === 3 ? "3!" : String(got);
@@ -755,7 +837,7 @@ function placeBag(px, pos){
   /* It was scored as one point because we did not know where it sat. Now we
      do, and a yellow bag is always worth three, so top it up. */
   if (where === "hole") {
-    inning[b.owner] += 2;
+    award(b.owner, 2);
     bumpScore(); hud(); celebrate();
     $("why").textContent = "Found the bag. In the hole, that is 3.";
   } else {
@@ -817,7 +899,7 @@ function knockAbout(hit){
     if (where === "hole")    { b.pts = 3; sunk.push(b); }
     else if (where === "outside") { b.pts = 0; lost.push(b); }
     else                     { b.pts = 1; }
-    if (b.pts !== was) inning[b.owner] += b.pts - was;
+    if (b.pts !== was) award(b.owner, b.pts - was);
     moved.push(b);
   });
 
@@ -956,7 +1038,7 @@ function verdict(){
        little off, so a win is scored at the point of impact. */
     var where = guessed ? "unknown" : target(firstPx);
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
-    inning[turn] += got;
+    award(turn, got);
     if (got > 0) bumpScore();
     document.body.className = got === 3 ? "three" : got === 0 ? "lose" : "win";
     $("bigText").textContent = got === 3 ? "CORNHOLE" : got === 0 ? "MISS" : String(got);
@@ -997,10 +1079,21 @@ function verdict(){
   $("big").classList.add("on");
   hud();
   if (on && document.body.className === "win") beep(760, 100);
+  if (players === 1) {
+    /* Unlimited throws. Old bags are swept off so the board stays readable. */
+    while (onBoard.length > PRACTICE_KEEP) {
+      var old = onBoard.shift();
+      old.el.style.opacity = "0";
+      (function(el){ setTimeout(function(){ el.remove(); }, 320); })(old.el);
+    }
+    hud();
+    rt(idle, 1500);
+    return;
+  }
   bags[turn]--;
   /* Real cornhole alternates one bag at a time, so the board fills up from
      both players and nobody has to clear it mid inning. */
-  if (players === 2 && bags[1 - turn] > 0) turn = 1 - turn;
+  if (bags[1 - turn] > 0) turn = 1 - turn;
   hud();
   if (bags[0] + bags[1] <= 0) rt(endFrame, 1700); else rt(idle, 1500);
 }
@@ -1242,6 +1335,8 @@ function exitGame(){
   frame = 1; bags = [BAGS, BAGS];
   scores = [0, 0]; turn = 0; paused = false; inning = [0, 0]; onBoard = [];
   $("startTitle").innerHTML = "Pocket<br>Cornhole";
+  $("summary").classList.add("hide");
+  $("startBody").classList.remove("hide");
   $("startBody").textContent = "Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.";
   $("startFoot").textContent = "Then hands off the phone for a moment.";
   $("modes").classList.remove("hide");
