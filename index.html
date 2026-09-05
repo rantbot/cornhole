@@ -176,6 +176,8 @@
   }
   .pl .who { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
   .pl b { font-size: var(--t-xs); font-weight: 700; white-space: nowrap; }
+  /* what is sitting on the board this round, before the two sides cancel */
+  .pl .live { font-size: var(--t-xs); font-weight: 800; color: var(--gold); }
   .pl .n {
     font-size: var(--t-xl); font-weight: 800; letter-spacing: -.045em; line-height: 1;
     font-variant-numeric: tabular-nums; color: var(--chalk);
@@ -383,13 +385,13 @@
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
   </div>
-  <div id="build">b48</div>
+  <div id="build">b51</div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
     <div id="scores">
-      <div class="pl" id="p0"><span class="who"><b>Player 1</b><span class="n">0</span></span><span class="pips"></span></div>
+      <div class="pl" id="p0"><span class="who"><b>Player 1</b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
       <div id="vs">VS</div>
-      <div class="pl" id="p1"><span class="who"><b>Player 2</b><span class="n">0</span></span><span class="pips"></span></div>
+      <div class="pl" id="p1"><span class="who"><b>Player 2</b><span class="n">0</span><span class="live"></span></span><span class="pips"></span></div>
     </div>
     <span id="ptsSub"></span>
   </div>
@@ -458,9 +460,11 @@ var secondHit = 0;      // it came off and hit something else
 var settled = false;    // the phone went quiet after the landing
 var firstContactAt = 0, liftAt = 0;
 var BRIEF_MS = 300;     // a bounce brushes the glass, it does not rest on it
-var points = 0, firstPx = null, lastPx = null;
-var BAGS = 4, bagsLeft = BAGS, frame = 1, frameStart = 0;
+var firstPx = null, lastPx = null;
+var BAGS = 4, bags = [BAGS, BAGS], frame = 1;
 var scores = [0, 0], turn = 0, paused = false, players = 1;
+var inning = [0, 0];        // points on the board this round, before cancelling
+var onBoard = [];           // every bag lying there, so they can be knocked about
 var impactZ = 1;          // how much of the hit went straight down through the glass
 var Z_HARD = 0.34;        // clearly sideways. never even opens a round.
 var Z_MIN  = 0.55;        // borderline. opens one, but dropped if nothing lands.
@@ -472,6 +476,8 @@ var pendingDot = null, pendingUntil = 0;  // a bag placed before we knew its spo
 var PENDING_MS = 8000;
 var PICKUP_PX  = 14;      // a lifted packet drags this far, a dropped one does not
 var PICKUP_TAIL = 900;    // stay deaf that long after a hand has been on the glass
+var DRAG_PX = 45, DRAG_MS = 260;   // a hand drags far and slowly, a skid does not
+var contactAt = 0, pickedUp = false;
 var APPEAL_MS = 5000;
 
 function beep(f, ms){
@@ -568,25 +574,27 @@ function zone(p){
   return "the " + (v && h ? v + " " + h : v || h);
 }
 function hud(){
-  var pips = "";
-  for (var i = 0; i < BAGS; i++)
-    pips += '<i class="' + (i < BAGS - bagsLeft ? "used" : "") + '"></i>';
   [0, 1].forEach(function(n){
+    var pips = "";
+    for (var i = 0; i < BAGS; i++)
+    pips += '<i class="' + (i < BAGS - bags[n] ? "used" : "") + '"></i>';
     var el = $("p" + n), active = (turn === n && !paused);
     el.querySelector(".n").textContent = scores[n];
-    el.querySelector(".pips").innerHTML = active ? pips : "";
+    var live = el.querySelector(".live");
+    if (live) live.textContent = inning[n] > 0 ? "+" + inning[n] : "";
+    el.querySelector(".pips").innerHTML = pips;      /* both players, always */
     el.classList.toggle("on", active);
   });
   var col = turn === 0 ? "--p1" : "--p2";
   var stack = "";
-  for (var k = 0; k < bagsLeft; k++)
+  for (var k = 0; k < bags[turn]; k++)
     stack += '<i style="background:var(' + col + ');transform:rotate(' +
              ((k * 37 % 13) - 6) + 'deg)"></i>';
   $("ready").innerHTML = paused ? "" : stack;
   $("ptsSub").textContent = paused
     ? "round " + frame
     : "Player " + (turn + 1) + " throwing \u00b7 round " + frame + " \u00b7 " +
-      (bagsLeft === 1 ? "1 bag left" : bagsLeft + " bags left");
+      (bags[turn] === 1 ? "last bag" : bags[turn] + " bags left");
 }
 function bumpScore(){
   var el = $("p" + turn);
@@ -620,8 +628,13 @@ addEventListener("resize", function(){ setTimeout(checkChrome, 120); });
 /* Four bags, then the other player steps up. The card also keeps the phone
    safe while you swap places and collect the bags. */
 function endFrame(){
-  var got = points - frameStart;
-  var who = turn;
+  var got = [inning[0], inning[1]];
+  /* Cancellation. The two sides wipe each other out and only the difference
+     is awarded, so a round can be worth nothing to anybody. */
+  var diff = got[0] - got[1];
+  if (players === 1) scores[0] += got[0];
+  else if (diff > 0) scores[0] += diff;
+  else if (diff < 0) scores[1] += -diff;
   appealUntil = 0; pendingDot = null;
   waiting = false; clearRound();
   document.body.className = "";
@@ -630,25 +643,36 @@ function endFrame(){
   beep(520, 120); setTimeout(function(){ beep(780, 200); }, 130);
 
   paused = true;
-  if (players === 2) { turn = 1 - turn; if (turn === 0) frame++; }
-  else frame++;
-  bagsLeft = BAGS; frameStart = points;
+  frame++;
+  bags = [BAGS, BAGS]; inning = [0, 0]; onBoard = [];
+
+  /* Player one opens the next inning, as the board is cleared between them. */
+  turn = 0;
   hud();
 
-  $("startTitle").innerHTML = players === 2
-    ? "Player " + (turn + 1) + "<br>you're up"
-    : "Round " + frame;
-  $("startBody").textContent = players === 2
-    ? "Player " + (who + 1) + " scored " +
-      (got === 0 ? "nothing that round." : got + (got === 1 ? " point." : " points.")) 
-    : (got === 0 ? "No points that round." : got + (got === 1 ? " point" : " points") +
-       " from four bags. " + scores[0] + " in total.");
+  if (players === 2) {
+    var lead = scores[0] === scores[1] ? "It is level at " + scores[0] + "."
+      : "Player " + (scores[0] > scores[1] ? 1 : 2) + " leads " +
+        Math.max(scores[0], scores[1]) + " to " + Math.min(scores[0], scores[1]) + ".";
+    $("startTitle").innerHTML = "End of<br>round " + (frame - 1);
+    $("startBody").textContent =
+      "Player 1 " + got[0] + " on the board, Player 2 " + got[1] + ". " +
+      (diff === 0 ? "They cancel out, so nobody scores. "
+                  : "Player " + (diff > 0 ? 1 : 2) + " takes " + Math.abs(diff) + ". ") + lead;
+    $("startFoot").textContent = "Clear the board, then Player 1 opens the next round.";
+  } else {
+    $("startTitle").innerHTML = "Round " + frame;
+    $("startBody").textContent = got[0] === 0
+      ? "No points that round. Still on " + scores[0] + "."
+      : got[0] + (got[0] === 1 ? " point" : " points") + " from four bags. " +
+        scores[0] + " in total.";
+    $("startFoot").textContent = "Collect the bags, then hands off the phone.";
+  }
   $("modes").classList.add("hide");
   $("startTap").classList.remove("hide");
   $("startTap").textContent = "Tap when ready";
-  $("startFoot").textContent = "Collect the bags first, then hands off the phone.";
   setTimeout(function(){
-    $("dots").innerHTML = ""; lastDot = null;
+    $("dots").innerHTML = ""; lastDot = null; onBoard = [];
     $("start").classList.remove("gone");
   }, 900);
 }
@@ -669,6 +693,8 @@ function startGame(n){
 
 function idle(){
   waiting = false; clearRound();
+  if (players === 2 && !paused && armed)
+    $("why").textContent = "Player " + (turn + 1) + ", your throw.";
   $("live").style.display = "none";
   document.body.className = "";
   $("big").classList.remove("on");
@@ -682,7 +708,7 @@ function appeal(px, pos){
   var where = target(px);
   if (where === "outside") return;
   var got = where === "hole" ? 3 : 1;
-  points += got; scores[turn] += got; wins++; bumpScore();
+  inning[turn] += got; wins++; bumpScore();
   plot(pos, where === "hole");
   document.body.className = where === "hole" ? "three" : "win";
   $("bigText").textContent = got === 3 ? "3!" : String(got);
@@ -699,16 +725,17 @@ function placeBag(px, pos){
   if (!pendingDot || !px) return;
   var where = target(px);
   if (where === "outside") return;
-  pendingDot.style.left = pos.x + "%";
-  pendingDot.style.top  = pos.y + "%";
-  pendingDot.className = "dot last " + (turn === 0 ? "w" : "h") + (where === "hole" ? " in" : "");
-  pendingDot.style.transform = "rotate(" + (Math.random() * 34 - 17).toFixed(1) + "deg)";
+  var b = pendingDot;
+  b.x = pos.x; b.y = pos.y; b.unknown = false;
+  b.pts = where === "hole" ? 3 : 1;
+  drawBag(b);
   pendingDot = null; pendingUntil = 0;
+  knockAbout(b);
 
   /* It was scored as one point because we did not know where it sat. Now we
      do, and a yellow bag is always worth three, so top it up. */
   if (where === "hole") {
-    points += 2; scores[turn] += 2;
+    inning[b.owner] += 2;
     bumpScore(); hud(); celebrate();
     $("why").textContent = "Found the bag. In the hole, that is 3.";
   } else {
@@ -717,16 +744,80 @@ function placeBag(px, pos){
   setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1800);
 }
 
+function bagClass(b){
+  return "dot " + (b.unknown ? "u" : b.owner === 0 ? "w" : "h") + (b.pts === 3 ? " in" : "");
+}
+function drawBag(b){
+  b.el.className = bagClass(b) + (b === lastDot ? " last" : "");
+  b.el.style.left = b.x + "%";
+  b.el.style.top  = b.y + "%";
+  b.el.style.transform = "rotate(" + b.rot + "deg)";
+}
 function plot(p, inHole, unknown){
   if (!p) return;
-  if (lastDot) lastDot.classList.remove("last");
-  var d = document.createElement("div");
-  /* blue bags for player one, orange for player two, whichever board they land on */
-  d.className = "dot last " + (unknown ? "u" : turn === 0 ? "w" : "h") + (inHole ? " in" : "");
-  d.style.transform = "rotate(" + (Math.random() * 34 - 17).toFixed(1) + "deg)";
-  d.style.left = p.x + "%"; d.style.top = p.y + "%";
-  $("dots").appendChild(d);
-  lastDot = d;
+  if (lastDot) { lastDot.el.classList.remove("last"); }
+  var b = {
+    el: document.createElement("div"),
+    x: p.x, y: p.y, owner: turn, pts: inHole ? 3 : 1,
+    unknown: !!unknown, rot: +(Math.random() * 34 - 17).toFixed(1)
+  };
+  b.el.style.transition = "left .32s cubic-bezier(.2,.8,.3,1), top .32s cubic-bezier(.2,.8,.3,1), opacity .3s ease";
+  $("dots").appendChild(b.el);
+  onBoard.push(b);
+  lastDot = b;
+  drawBag(b);
+  knockAbout(b);
+}
+
+/* ---------------- bags shove each other ----------------
+   A packet landing on top of another really does move it, and the screen
+   cannot see that happen, so the board works it out. A shoved bag can end up
+   in the hole, which is worth three to whoever threw it, or off the edge,
+   which is worth nothing to anybody. */
+function pct(v, horiz){ return horiz ? v / 100 * innerWidth : v / 100 * innerHeight; }
+function knockAbout(hit){
+  var KNOCK = innerWidth * 0.13;          // a bag reaches about this far
+  var moved = [], sunk = [], lost = [];
+
+  onBoard.forEach(function(b){
+    if (b === hit || b.unknown) return;
+    var dx = pct(b.x, 1) - pct(hit.x, 1), dy = pct(b.y, 0) - pct(hit.y, 0);
+    var d = Math.hypot(dx, dy);
+    if (d > KNOCK) return;
+    if (d < 1) { dx = 1; dy = 0; d = 1; }
+    var push = (KNOCK - d) * 0.85;        // the closer it lands, the harder the shove
+    var nx = pct(b.x, 1) + dx / d * push;
+    var ny = pct(b.y, 0) + dy / d * push;
+    b.x = +(nx / innerWidth * 100).toFixed(1);
+    b.y = +(ny / innerHeight * 100).toFixed(1);
+    b.rot = +(b.rot + (Math.random() * 40 - 20)).toFixed(1);
+
+    var where = target({ x: nx, y: ny });
+    var was = b.pts;
+    if (where === "hole")    { b.pts = 3; sunk.push(b); }
+    else if (where === "outside") { b.pts = 0; lost.push(b); }
+    else                     { b.pts = 1; }
+    if (b.pts !== was) inning[b.owner] += b.pts - was;
+    moved.push(b);
+  });
+
+  if (!moved.length) return;
+  moved.forEach(drawBag);
+  lost.forEach(function(b){
+    b.el.style.opacity = "0";
+    setTimeout(function(){ b.el.remove(); }, 320);
+  });
+  onBoard = onBoard.filter(function(b){ return lost.indexOf(b) < 0; });
+
+  hud();
+  var note = sunk.length
+    ? (sunk.length === 1 ? "Knocked a bag in the hole." : "Knocked " + sunk.length + " bags in.")
+    : lost.length
+      ? (lost.length === 1 ? "Knocked a bag off the board." : "Knocked " + lost.length + " bags off.")
+      : "Shunted a bag across.";
+  setTimeout(function(){ if (!waiting) $("why").textContent = note; }, 420);
+  if (sunk.length) setTimeout(celebrate, 380);
+  else if (lost.length) setTimeout(function(){ beep(240, 160); }, 380);
 }
 
 /* ---- round ---- */
@@ -747,7 +838,7 @@ function onImpact(m, zShare){
   lastImpact = t; roundT0 = t; waiting = true; extended = false; impactMag = m; impactZ = zShare;
   plays++; hud();
   lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
-  settled = false; firstContactAt = 0; liftAt = 0;
+  settled = false; firstContactAt = 0; liftAt = 0; pickedUp = false; contactAt = 0;
   appealUntil = 0;
   pendingDot = null; pendingUntil = 0;
 
@@ -762,12 +853,28 @@ function onImpact(m, zShare){
 
   poll = setInterval(function(){
     if (!waiting) { clearInterval(poll); return; }
+    if (pickedUp) { clearInterval(poll); verdict(); return; }
     if (down > 0 || (lastContact && lastContact - roundT0 >= LATE_FROM)) verdict();
   }, 40);
 }
 
 function verdict(){
   if (!waiting) return;
+
+  /* You were collecting the bag, not throwing one. No score, no bag spent. */
+  if (pickedUp) {
+    waiting = false; clearRound();
+    $("live").style.display = "none";
+    $("big").classList.remove("on");
+    document.body.className = "";
+    plays--;
+    deafUntil = performance.now() + PICKUP_TAIL;
+    lastImpact = performance.now();
+    hud();
+    $("why").textContent = "That was a pickup, not a throw.";
+    setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1600);
+    return;
+  }
 
   /* Only a round that has felt nothing at all is worth more buzzing. One that
      touched and went quiet is a real bounce, so it gets called now. */
@@ -829,7 +936,7 @@ function verdict(){
        little off, so a win is scored at the point of impact. */
     var where = guessed ? "unknown" : target(firstPx);
     var got = where === "hole" ? 3 : where === "outside" ? 0 : 1;
-    points += got; scores[turn] += got;
+    inning[turn] += got;
     if (got > 0) bumpScore();
     document.body.className = got === 3 ? "three" : got === 0 ? "lose" : "win";
     $("bigText").textContent = got === 3 ? "CORNHOLE" : got === 0 ? "MISS" : String(got);
@@ -870,9 +977,12 @@ function verdict(){
   $("big").classList.add("on");
   hud();
   if (on && document.body.className === "win") beep(760, 100);
-  bagsLeft--;
+  bags[turn]--;
+  /* Real cornhole alternates one bag at a time, so the board fills up from
+     both players and nobody has to clear it mid inning. */
+  if (players === 2 && bags[1 - turn] > 0) turn = 1 - turn;
   hud();
-  if (bagsLeft <= 0) rt(endFrame, 1700); else rt(idle, 1500);
+  if (bags[0] + bags[1] <= 0) rt(endFrame, 1700); else rt(idle, 1500);
 }
 
 /* ---- sensors ---- */
@@ -934,7 +1044,8 @@ document.addEventListener("touchstart", function(e){
   if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
   e.preventDefault();
   down = e.touches.length;
-  if (!waiting) lastTouchStart = performance.now();
+  contactAt = performance.now();
+  if (!waiting) lastTouchStart = contactAt;
   var t0 = e.changedTouches[0];
   touchOrigin = { x: t0.clientX, y: t0.clientY }; touchMoved = 0;
   contact(t0);
@@ -946,6 +1057,10 @@ document.addEventListener("touchmove", function(e){
   if (touchOrigin) {
     var d = Math.hypot(t.clientX - touchOrigin.x, t.clientY - touchOrigin.y);
     if (d > touchMoved) touchMoved = d;
+    /* A bag skidding on landing travels a little and is done in a moment.
+       Being dragged off the board goes much further and takes much longer. */
+    if (waiting && touchMoved > DRAG_PX && performance.now() - contactAt > DRAG_MS)
+      pickedUp = true;
   }
   if (waiting) contact(t);
 }, {passive:false});
@@ -1103,16 +1218,16 @@ applyCfg();
 
 function exitGame(){
   goFullscreen();
-  $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0;
-  frame = 1; bagsLeft = BAGS; frameStart = 0;
-  scores = [0, 0]; turn = 0; paused = false;
+  $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0; onBoard = [];
+  frame = 1; bags = [BAGS, BAGS];
+  scores = [0, 0]; turn = 0; paused = false; inning = [0, 0]; onBoard = [];
   $("startTitle").innerHTML = "Pocket<br>Cornhole";
   $("startBody").textContent = "Lay the phone flat, screen up. Throw a foil-wrapped sugar packet at it.";
   $("startFoot").textContent = "Then hands off the phone for a moment.";
   $("modes").classList.remove("hide");
   $("startTap").classList.add("hide");
   $("start").classList.remove("gone");
-  wins = 0; plays = 0; points = 0; hud();
+  wins = 0; plays = 0; hud();
   $("why").textContent = "";
 }
 
