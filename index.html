@@ -123,7 +123,7 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b28</div>
+  <div id="build">b29</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
@@ -162,6 +162,8 @@ var impactZ = 1;          // how much of the hit went straight down through the 
 var Z_MIN = 0.45;         // below this it came in sideways, so through the table
 var appealUntil = 0;      // a lost round can still be put right if it turns up
 var touchOrigin = null, touchMoved = 0;   // telling a pickup from a quiet drop
+var pendingDot = null, pendingUntil = 0;  // a bag placed before we knew its spot
+var PENDING_MS = 8000;
 var PICKUP_PX  = 14;      // a lifted packet drags this far, a dropped one does not
 var PICKUP_TAIL = 900;    // stay deaf that long after a hand has been on the glass
 var APPEAL_MS = 5000;
@@ -296,6 +298,21 @@ function appeal(px, pos){
   setTimeout(function(){ if (!waiting) idle(); }, 1500);
 }
 
+/* The bag was already scored, we just did not know where it was sitting.
+   Now the screen has felt it, so move it there and draw it properly. */
+function placeBag(px, pos){
+  if (!pendingDot || !px) return;
+  var where = target(px);
+  if (where === "outside") return;
+  pendingDot.style.left = pos.x + "%";
+  pendingDot.style.top  = pos.y + "%";
+  pendingDot.className = "dot last " + (where === "hole" ? "h" : "w");
+  pendingDot = null; pendingUntil = 0;
+  $("why").textContent = "Found the bag. It is " +
+    (where === "hole" ? "in the hole." : "in " + zone(pos) + ".");
+  setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1600);
+}
+
 function plot(p, inHole, unknown){
   if (!p) return;
   if (lastDot) lastDot.classList.remove("last");
@@ -315,6 +332,7 @@ function onImpact(m, zShare){
   plays++; hud();
   lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
   appealUntil = 0;
+  pendingDot = null; pendingUntil = 0;
 
   document.body.className = "settle";
   $("big").textContent = "…"; $("big").classList.add("on");
@@ -399,8 +417,15 @@ function verdict(){
     /* every point puts a bag on the board. if the screen never gave us a spot,
        it goes mid board as a dashed one so the count always matches. */
     if (got > 0) {
-      if (firstPos && !guessed) plot(firstPos, where === "hole", false);
-      else plot({ x: 50, y: 62 }, false, true);
+      if (firstPos && !guessed) {
+        plot(firstPos, where === "hole", false);
+      } else {
+        /* No spot yet. Park it mid board and move it the moment the screen
+           finally feels the packet, which is what the white ring is showing. */
+        plot({ x: 50, y: 62 }, false, true);
+        pendingDot = lastDot;
+        pendingUntil = performance.now() + PENDING_MS;
+      }
     }
     $("why").textContent =
         where === "hole"    ? "In the hole."
@@ -472,6 +497,7 @@ function contact(t){
   lastPx = { x: t.clientX, y: t.clientY };
   if (!firstPos) { firstPos = lastPos; firstPx = lastPx; }
   if (!waiting && performance.now() < appealUntil) appeal(lastPx, lastPos);
+  else if (!waiting && pendingDot && performance.now() < pendingUntil) placeBag(lastPx, lastPos);
   var lv = $("live");
   lv.style.left = t.clientX + "px"; lv.style.top = t.clientY + "px";
   lv.style.display = waiting ? "block" : "none";
@@ -557,7 +583,7 @@ checkChrome();
 $("clear").addEventListener("click", function(e){
   e.stopPropagation();
   goFullscreen();
-  $("dots").innerHTML = ""; lastDot = null;
+  $("dots").innerHTML = ""; lastDot = null; pendingDot = null; pendingUntil = 0;
   wins = 0; plays = 0; points = 0; hud();
   $("why").textContent = "";
 });
