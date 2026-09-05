@@ -35,8 +35,10 @@
     /* duck canvas and the reward */
     --p1:     #2F7FC9;
     --p1-lit: #7FBBF0;
+    --p1-dark:#1F5F9E;
     --p2:     #D2621C;
     --p2-lit: #F0A468;
+    --p2-dark:#A8480D;
     --gold:   #F0B429;
     --bad:    #C0392B;
 
@@ -76,11 +78,14 @@
 
   /* ---------- the play surface ---------- */
   #board {
-    position: fixed; left: 0; right: 0;
-    top: var(--rail-h); bottom: var(--foot-h); z-index: 0;
+    position: fixed; left: 3.5%; right: 3.5%;
+    top: calc(var(--rail-h) + 10px); bottom: calc(var(--foot-h) + 10px); z-index: 0;
     pointer-events: none; overflow: hidden;
-    box-shadow: inset 0 14px 22px -14px rgba(0,0,0,.85),
-                inset 0 -14px 22px -14px rgba(0,0,0,.85);
+    border-radius: 4px;
+    /* the painted frame, then the board lifted off the ground beneath it */
+    box-shadow: 0 0 0 6px #163650, 0 0 0 7px rgba(0,0,0,.55),
+                0 16px 30px -12px rgba(0,0,0,.9),
+                inset 0 0 70px rgba(60,28,4,.30);
     background:
       repeating-linear-gradient(91deg, rgba(88,52,18,.13) 0 1px, transparent 1px 6px),
       repeating-linear-gradient(89deg, rgba(255,236,205,.10) 0 1px, transparent 1px 19px),
@@ -88,18 +93,22 @@
       linear-gradient(180deg, var(--ply-1) 0%, var(--ply-2) 52%, var(--ply-3) 100%);
     transition: filter .2s ease;
   }
-  #board::after {                       /* plank seams */
+  #board::after {                       /* plank seams, softened */
     content: ""; position: absolute; inset: 0;
-    background: repeating-linear-gradient(180deg,
-      transparent 0 25%, rgba(74,42,12,.34) 25% calc(25% + 2px));
+    background:
+      repeating-linear-gradient(180deg,
+        transparent 0 calc(20% - 3px),
+        rgba(255,238,210,.07) calc(20% - 3px) calc(20% - 1px),
+        rgba(74,42,12,.30)    calc(20% - 1px) calc(20% + 1px),
+        transparent           calc(20% + 1px) 20%),
+      radial-gradient(120% 78% at 50% 34%, transparent 40%, rgba(38,18,2,.34) 100%);
   }
-  #board::before {                      /* the chalked side lines */
-    content: ""; position: absolute; left: 4%; right: 4%; top: 0; bottom: 0;
-    border-left: 2px solid rgba(255,247,232,.16);
-    border-right: 2px solid rgba(255,247,232,.16);
+  #board::before {                      /* a hairline of light along the top edge */
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: rgba(255,246,228,.22);
   }
   #hole {
-    position: fixed; left: 50%; top: 34%; width: 40%; aspect-ratio: 1; z-index: 1;
+    position: fixed; left: 50%; top: 44%; width: 31%; aspect-ratio: 1; z-index: 1;
     transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none;
     background: radial-gradient(circle at 50% 30%, #2A1B0B 0%, #170E05 44%, var(--void) 100%);
     box-shadow: inset 0 10px 18px rgba(0,0,0,.95),
@@ -108,6 +117,18 @@
   }
 
   /* ---------- bags ---------- */
+  /* your remaining bags, waiting on the near end of the board */
+  #ready {
+    position: fixed; left: 0; right: 0; bottom: calc(var(--foot-h) + 26px); z-index: 1;
+    display: flex; justify-content: center; gap: 5px; pointer-events: none;
+    opacity: .5;
+  }
+  #ready i {
+    width: 34px; height: 29px; border-radius: var(--r-sm);
+    box-shadow: 0 3px 6px -2px rgba(28,14,2,.65),
+                inset 0 -4px 8px rgba(0,0,0,.30),
+                inset 0 3px 6px rgba(255,255,255,.18);
+  }
   #dots { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
   .dot {
     position: absolute; width: 40px; height: 34px; margin: -17px 0 0 -20px;
@@ -120,8 +141,8 @@
     content: ""; position: absolute; inset: 4px; border-radius: var(--r-xs);
     border: 1px dashed rgba(255,255,255,.40);
   }
-  .dot.w  { background: linear-gradient(155deg, var(--p1-lit), #1F5F9E); }
-  .dot.h  { background: linear-gradient(155deg, var(--p2-lit), #A8480D); }
+  .dot.w  { background: linear-gradient(155deg, var(--p1-lit), var(--p1-dark)); }
+  .dot.h  { background: linear-gradient(155deg, var(--p2-lit), var(--p2-dark)); }
   .dot.in { width: 31px; height: 27px; margin: -13px 0 0 -15px;
             filter: brightness(.46) saturate(.75); z-index: 0; }
   .dot.u  { background: repeating-linear-gradient(45deg,
@@ -148,12 +169,13 @@
   #vs { align-self: center; font-size: var(--t-xs); font-weight: 800;
         color: var(--chalk-3); letter-spacing: .1em; }
   .pl {
-    flex: 1 1 0; max-width: 40%; padding: 4px 10px 5px; border-radius: var(--r-sm);
+    flex: 1 1 0; max-width: 42%; padding: 5px 11px 6px; border-radius: var(--r-sm);
     background: rgba(244,239,228,.06); border: 1.5px solid transparent;
-    display: flex; align-items: baseline; justify-content: center; gap: 8px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
     opacity: .42; transition: opacity .2s ease, background .2s ease, border-color .2s ease;
   }
-  .pl b { font-size: var(--t-xs); font-weight: 700; }
+  .pl .who { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+  .pl b { font-size: var(--t-xs); font-weight: 700; white-space: nowrap; }
   .pl .n {
     font-size: var(--t-xl); font-weight: 800; letter-spacing: -.045em; line-height: 1;
     font-variant-numeric: tabular-nums; color: var(--chalk);
@@ -164,7 +186,7 @@
   #p0.on { opacity: 1; background: rgba(47,127,201,.22); border-color: var(--p1); }
   #p1.on { opacity: 1; background: rgba(210,98,28,.22); border-color: var(--p2); }
   .pl.bump .n { transform: scale(1.3); color: var(--gold); }
-  .pl .pips { display: flex; gap: 4px; }
+  .pl .pips { display: flex; gap: 4px; align-self: center; }
   .pl .pips i { width: 10px; height: 8px; border-radius: var(--r-xs); }
   #p0 .pips i { background: var(--p1); }
   #p1 .pips i { background: var(--p2); }
@@ -174,13 +196,21 @@
   #scores.solo .pl { max-width: 62%; }
 
   /* ---------- bottom rail: the caller ---------- */
-  #why {
+  #foot {
     position: fixed; left: 0; right: 0; bottom: 0; height: var(--foot-h); z-index: 6;
-    padding: 0 46px calc(2px + env(safe-area-inset-bottom));
-    display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: 0 8px calc(2px + env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 8px;
     background: linear-gradient(0deg, var(--panel), var(--rail));
     box-shadow: 0 -3px 0 rgba(0,0,0,.3);
-    font-size: var(--t-sm); font-weight: 600; line-height: 1.35; color: var(--chalk-2);
+  }
+  #foot button {
+    flex: none; padding: 9px 13px; border-radius: var(--r-sm);
+    background: rgba(244,239,228,.08); color: var(--chalk-2);
+    border: 1px solid var(--line); font-size: var(--t-xs); font-weight: 700;
+  }
+  #why {
+    flex: 1 1 auto; min-width: 0; text-align: center;
+    font-size: var(--t-sm); font-weight: 600; line-height: 1.3; color: var(--chalk-2);
     pointer-events: none;
   }
 
@@ -261,7 +291,40 @@
   }
   .hide { display: none !important; }
 
-  #confirm { z-index: 10; display: none; padding: 26px; background: rgba(6,14,22,.84); }
+  #settings {
+    position: fixed; inset: 0; z-index: 10; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(6,14,22,.86); overflow-y: auto;
+  }
+  #settings.on { display: flex; }
+  #settings .sheet {
+    width: 100%; max-width: 340px; padding: 20px 18px 16px; border-radius: var(--r-lg);
+    background: linear-gradient(180deg, var(--panel), var(--rail));
+    border: 1.5px solid var(--line-2); box-shadow: var(--lift);
+  }
+  #settings h2 { margin: 0 0 14px; font-size: var(--t-lg); font-weight: 800;
+                 letter-spacing: -.03em; color: var(--chalk); text-align: center; }
+  #settings h3 { margin: 0 0 8px; font-size: var(--t-xs); font-weight: 700;
+                 color: var(--chalk-3); }
+  #settings small { display: block; margin-bottom: 6px; font-size: var(--t-xs);
+                    font-weight: 700; color: var(--chalk-3); }
+  #settings .two { display: flex; gap: 12px; margin-bottom: 16px; }
+  #settings .two > div { flex: 1; }
+  .sw { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+  .sw button { width: 38px; height: 30px; padding: 0; border-radius: var(--r-sm);
+               border: 2px solid transparent; box-shadow: inset 0 -4px 8px rgba(0,0,0,.28),
+               inset 0 3px 6px rgba(255,255,255,.18); }
+  .sw button[aria-pressed="true"] { border-color: var(--chalk);
+               box-shadow: 0 0 0 2px rgba(10,27,42,.9), 0 0 0 4px var(--chalk); }
+  #settings .two .sw button { width: 30px; height: 26px; }
+  #noise { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+  #noise .btn { text-align: left; font-size: var(--t-sm); padding: 10px 12px; }
+  #noise .btn span { display: block; margin-top: 2px; font-size: var(--t-xs);
+                     font-weight: 500; color: var(--chalk-3); }
+  #noise .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold);
+                                     background: rgba(240,180,41,.14); }
+  #noise .btn[aria-pressed="true"] span { color: var(--gold); opacity: .8; }
+  #confirm { z-index: 11; display: none; padding: 26px; background: rgba(6,14,22,.84); }
   #confirm.on { display: flex; }
   #confirm .sheet {
     width: 100%; max-width: 320px; padding: 22px 20px 16px; border-radius: var(--r-lg);
@@ -275,15 +338,9 @@
   #confirmYes { margin-bottom: 8px; }
 
   /* ---------- small chrome ---------- */
-  #clear {
-    position: fixed; top: calc(4px + env(safe-area-inset-top)); left: 7px;
-    width: 36px; height: 36px; padding: 0; border-radius: var(--r-sm); z-index: 8;
-    background: rgba(244,239,228,.08); color: var(--chalk-2);
-    border: 1px solid var(--line); font-size: var(--t-xs); font-weight: 700;
-  }
   #oob { display: none; }
   #install {
-    position: fixed; bottom: calc(4px + env(safe-area-inset-bottom));
+    position: fixed; bottom: calc(var(--foot-h) + 8px);
     left: 50%; transform: translateX(-50%); z-index: 8; display: none;
     max-width: 90%; align-items: center; gap: 8px;
     padding: 5px 6px 5px 12px; border-radius: var(--r-pill);
@@ -296,7 +353,7 @@
              background: rgba(244,239,228,.14); color: var(--chalk-2);
              border: 0; font-size: var(--t-xs); line-height: 1; }
   #build {
-    position: fixed; right: 7px; bottom: calc(5px + env(safe-area-inset-bottom));
+    position: fixed; right: 5px; top: calc(3px + env(safe-area-inset-top));
     z-index: 8; pointer-events: none; padding: 2px 6px; border-radius: var(--r-xs);
     background: rgba(0,0,0,.34); color: var(--chalk-3);
     font: 600 10px ui-monospace, Menlo, monospace;
@@ -312,6 +369,7 @@
   <div id="oob"></div>
   <div id="board"></div>
   <div id="hole"></div>
+  <div id="ready"></div>
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
@@ -325,19 +383,46 @@
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
   </div>
-  <div id="build">b46</div>
+  <div id="build">b48</div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
     <div id="scores">
-      <div class="pl" id="p0"><b>Player 1</b><span class="n">0</span><span class="pips"></span></div>
+      <div class="pl" id="p0"><span class="who"><b>Player 1</b><span class="n">0</span></span><span class="pips"></span></div>
       <div id="vs">VS</div>
-      <div class="pl" id="p1"><b>Player 2</b><span class="n">0</span><span class="pips"></span></div>
+      <div class="pl" id="p1"><span class="who"><b>Player 2</b><span class="n">0</span></span><span class="pips"></span></div>
     </div>
     <span id="ptsSub"></span>
   </div>
-  <div id="why"></div>
+  <div id="foot">
+    <button id="clear">Exit</button>
+    <div id="why"></div>
+    <button id="gear">Board</button>
+  </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
-  <button id="clear">exit</button>
+
+  <div id="settings">
+    <div class="sheet">
+      <h2>Your board</h2>
+
+      <h3>Wood</h3>
+      <div class="sw" id="swWood"></div>
+
+      <h3>Bags</h3>
+      <div class="two">
+        <div><small id="lblP1">Player 1</small><div class="sw" id="swP1"></div></div>
+        <div><small id="lblP2">Player 2</small><div class="sw" id="swP2"></div></div>
+      </div>
+
+      <h3>Where you're playing</h3>
+      <div id="noise">
+        <button class="btn" data-n="0">Steady table<span>A desk or kitchen counter. Picks up the softest throws.</span></button>
+        <button class="btn" data-n="1">Normal<span>A dining table with people around it.</span></button>
+        <button class="btn" data-n="2">Bumpy<span>A wobbly table, a bar, or a crowd. Ignores knocks harder.</span></button>
+      </div>
+
+      <button class="btn btn-go" id="setDone">Done</button>
+    </div>
+  </div>
   <div id="confirm">
     <div class="sheet">
       <h2 id="confirmTitle">End the game?</h2>
@@ -419,7 +504,7 @@ function boo(){
 
 function celebrate(){
   var W = innerWidth, H = innerHeight;
-  var cx = W * 0.5, cy = H * 0.34;
+  var cx = W * 0.5, cy = H * 0.44;
   var cols = ["#F0B429", "#F4EFE4", "#2F7FC9", "#D2621C"];
   var frag = document.createDocumentFragment();
   for (var i = 0; i < 44; i++) {
@@ -464,11 +549,11 @@ function clearRound(){ timers.forEach(clearTimeout); timers = []; clearInterval(
 /* These match the rails in the stylesheet. The top rail ends at 15% and the
    bottom one starts at 88%, so the wood between them is the scoring board and
    the chrome costs no play surface. */
-var RAIL_TOP = 0.15, RAIL_BOT = 0.88, EDGE = 0.04;
+var RAIL_TOP = 0.16, RAIL_BOT = 0.86, EDGE = 0.05;
 function target(px){
   if (!px) return "unknown";
   var W = innerWidth, H = innerHeight;
-  var hx = W * 0.5, hy = H * 0.34, hr = W * 0.20;
+  var hx = W * 0.5, hy = H * 0.44, hr = W * 0.155;
   if (Math.hypot(px.x - hx, px.y - hy) <= hr) return "hole";
   var inBoard = px.x > W * EDGE && px.x < W * (1 - EDGE)
              && px.y > H * RAIL_TOP && px.y < H * RAIL_BOT;
@@ -492,6 +577,12 @@ function hud(){
     el.querySelector(".pips").innerHTML = active ? pips : "";
     el.classList.toggle("on", active);
   });
+  var col = turn === 0 ? "--p1" : "--p2";
+  var stack = "";
+  for (var k = 0; k < bagsLeft; k++)
+    stack += '<i style="background:var(' + col + ');transform:rotate(' +
+             ((k * 37 % 13) - 6) + 'deg)"></i>';
+  $("ready").innerHTML = paused ? "" : stack;
   $("ptsSub").textContent = paused
     ? "round " + frame
     : "Player " + (turn + 1) + " throwing \u00b7 round " + frame + " \u00b7 " +
@@ -754,7 +845,7 @@ function verdict(){
       } else {
         /* No spot yet. Park it mid board and move it the moment the screen
            finally feels the packet, which is what the white ring is showing. */
-        plot({ x: 50, y: 64 }, false, true);
+        plot({ x: 50, y: 68 }, false, true);
         pendingDot = lastDot;
         pendingUntil = performance.now() + PENDING_MS;
       }
@@ -840,7 +931,7 @@ function contact(t){
   lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
   e.preventDefault();
   down = e.touches.length;
   if (!waiting) lastTouchStart = performance.now();
@@ -849,7 +940,7 @@ document.addEventListener("touchstart", function(e){
   contact(t0);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
   e.preventDefault();
   var t = e.changedTouches[0];
   if (touchOrigin) {
@@ -859,7 +950,7 @@ document.addEventListener("touchmove", function(e){
   if (waiting) contact(t);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#start") || e.target.closest("#confirm") || e.target.closest("#settings")) return;
   e.preventDefault();
   down = e.touches.length;
   /* A packet being lifted drags across the glass on the way up, and that jolt
@@ -918,6 +1009,97 @@ function resume(){
 $("m1").addEventListener("click", function(e){ e.stopPropagation(); startGame(1); });
 $("m2").addEventListener("click", function(e){ e.stopPropagation(); startGame(2); });
 $("startTap").addEventListener("click", function(e){ e.stopPropagation(); resume(); });
+
+/* ---------------- settings ----------------
+   Three things people actually want to change: what the board is made of,
+   what colour their bags are, and how forgiving it should be on a table that
+   gets knocked about. Everything is a swatch or a sentence, nothing is a
+   number, and the choices are remembered. */
+var WOODS = [
+  { id: "birch",  name: "Birch",   c: ["#D6A566", "#BE8442", "#9A6529"] },
+  { id: "maple",  name: "Maple",   c: ["#E8C89A", "#D3AA74", "#B4884E"] },
+  { id: "walnut", name: "Walnut",  c: ["#8B6242", "#6E4A30", "#523522"] },
+  { id: "cherry", name: "Cherry",  c: ["#C0714A", "#A15535", "#7E3D24"] },
+  { id: "navy",   name: "Painted", c: ["#3C6E96", "#2B5578", "#1D3E5C"] },
+  { id: "moss",   name: "Moss",    c: ["#7E9463", "#61764A", "#465836"] }
+];
+var CANVAS = [
+  { id: "blue",   c: "#2F7FC9", lit: "#7FBBF0", dark: "#1F5F9E" },
+  { id: "rust",   c: "#D2621C", lit: "#F0A468", dark: "#A8480D" },
+  { id: "red",    c: "#C33A38", lit: "#F0837F", dark: "#8E2422" },
+  { id: "green",  c: "#3F8F5E", lit: "#84CDA0", dark: "#2A6B43" },
+  { id: "purple", c: "#7A5AC2", lit: "#B49AEC", dark: "#573C96" },
+  { id: "black",  c: "#3A424B", lit: "#7B8794", dark: "#242A31" }
+];
+/* firmer tables need less help, wobbly ones need more scepticism */
+var TABLES = [
+  { acc: 0.18, zh: 0.28, zm: 0.48 },
+  { acc: 0.30, zh: 0.34, zm: 0.55 },
+  { acc: 0.60, zh: 0.46, zm: 0.66 }
+];
+
+var cfg = { wood: 0, p1: 0, p2: 1, table: 1 };
+try {
+  var saved = JSON.parse(localStorage.getItem("pocket-cfg") || "null");
+  if (saved) cfg = saved;
+} catch (e) {}
+
+function applyCfg(){
+  var r = document.documentElement.style;
+  var w = WOODS[cfg.wood].c;
+  r.setProperty("--ply-1", w[0]); r.setProperty("--ply-2", w[1]); r.setProperty("--ply-3", w[2]);
+  var a = CANVAS[cfg.p1], b = CANVAS[cfg.p2];
+  r.setProperty("--p1", a.c); r.setProperty("--p1-lit", a.lit); r.setProperty("--p1-dark", a.dark);
+  r.setProperty("--p2", b.c); r.setProperty("--p2-lit", b.lit); r.setProperty("--p2-dark", b.dark);
+  var t = TABLES[cfg.table];
+  ACC_THR = t.acc; Z_HARD = t.zh; Z_MIN = t.zm;
+  try { localStorage.setItem("pocket-cfg", JSON.stringify(cfg)); } catch (e) {}
+  paintSwatches();
+}
+
+function swatch(host, items, sel, bg, onPick){
+  host.innerHTML = "";
+  items.forEach(function(it, i){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.style.background = bg(it);
+    b.setAttribute("aria-label", it.name || it.id);
+    b.setAttribute("aria-pressed", i === sel ? "true" : "false");
+    b.addEventListener("click", function(e){ e.stopPropagation(); onPick(i); });
+    host.appendChild(b);
+  });
+}
+function paintSwatches(){
+  swatch($("swWood"), WOODS, cfg.wood,
+    function(w){ return "linear-gradient(180deg," + w.c[0] + "," + w.c[2] + ")"; },
+    function(i){ cfg.wood = i; applyCfg(); });
+  swatch($("swP1"), CANVAS, cfg.p1,
+    function(c){ return "linear-gradient(155deg," + c.lit + "," + c.dark + ")"; },
+    function(i){ if (i !== cfg.p2) { cfg.p1 = i; applyCfg(); } });
+  swatch($("swP2"), CANVAS, cfg.p2,
+    function(c){ return "linear-gradient(155deg," + c.lit + "," + c.dark + ")"; },
+    function(i){ if (i !== cfg.p1) { cfg.p2 = i; applyCfg(); } });
+  [].forEach.call($("noise").children, function(b, i){
+    b.setAttribute("aria-pressed", i === cfg.table ? "true" : "false");
+  });
+  $("lblP2").style.display = (typeof players !== "undefined" && players === 1) ? "none" : "";
+  $("swP2").style.display  = (typeof players !== "undefined" && players === 1) ? "none" : "";
+}
+
+[].forEach.call($("noise").children, function(b){
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    cfg.table = +b.getAttribute("data-n");
+    applyCfg();
+  });
+});
+$("gear").addEventListener("click", function(e){
+  e.stopPropagation(); paintSwatches(); $("settings").classList.add("on");
+});
+$("setDone").addEventListener("click", function(e){
+  e.stopPropagation(); $("settings").classList.remove("on"); goFullscreen();
+});
+applyCfg();
 
 function exitGame(){
   goFullscreen();
