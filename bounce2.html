@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>stayed or bounced</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0a0a0a; color: #777;
+    font: 700 20px/1.2 -apple-system, system-ui, sans-serif;
+    touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .05s linear;
+  }
+  body.settle  { background: #2962ff; color: #fff; }
+  body.confirm { background: #1a3ea8; color: #fff; }
+  body.win     { background: #00c853; color: #000; }
+  body.lose    { background: #c62828; color: #fff; }
+  #word { font-size: 22vw; font-weight: 800; letter-spacing: -.04em; text-align: center; z-index: 2; }
+  #sub  { position: fixed; bottom: 13vh; left: 0; right: 0; text-align: center; font-size: 4.5vw; z-index: 2; }
+  #score{ position: fixed; top: calc(2vh + env(safe-area-inset-top)); left: 0; right: 0;
+          text-align: center; font-size: 4vw; opacity: .55; z-index: 2; }
+  #spot { position: fixed; border: 6px solid #fff; border-radius: 50%;
+          transform: translate(-50%,-50%); display: none; z-index: 1; }
+  #buzz { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3;
+          padding: 16px 0 calc(16px + env(safe-area-inset-bottom));
+          background: #1c1c1c; color: #ddd; border: 0; border-top: 1px solid #333;
+          font: 700 17px -apple-system, system-ui, sans-serif; }
+</style>
+</head>
+<body>
+  <div id="spot"></div>
+  <div id="word">tap to arm</div>
+  <div id="sub"></div>
+  <div id="score"></div>
+  <button id="buzz">buzz now</button>
+
+<script>
+(function(){
+"use strict";
+var $ = function(i){ return document.getElementById(i); };
+var armed = false, ctx = null;
+var wins = 0, plays = 0;
+var waiting = false, waitTimer = null, lastImpact = -1e9;
+var accThr = 0.7, cal = [], calEnd = 0;
+
+/* the whole change lives in these two numbers and the check they feed */
+var CONFIRM_AT = 1150;   // last buzz, the one the verdict listens to
+var VERDICT_AT = 1550;
+var confirmedAfter = 0;  // contact activity later than this counts as still on
+var lastContact = 0;     // most recent touchstart or touchmove
+var down = 0;            // contacts held right now, which fire no events at all
+var lastPos = null;
+
+function beep(f, ms){
+  if (!ctx) return;
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "square"; o.frequency.value = f; g.gain.value = .25;
+  o.connect(g); g.connect(ctx.destination); o.start();
+  g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + ms/1000);
+  o.stop(ctx.currentTime + ms/1000);
+}
+
+function shake(){
+  if (navigator.vibrate) navigator.vibrate([45,35,45,35,45,35,60]);
+}
+
+function say(cls, big, small){
+  document.body.className = cls;
+  $("word").textContent = big;
+  $("word").style.fontSize = big.length > 6 ? "11vw" : "22vw";
+  $("sub").textContent = small || "";
+}
+function idle(){
+  waiting = false;
+  say("", "throw", "");
+  $("word").style.fontSize = "10vw";
+  $("spot").style.display = "none";
+}
+function tally(){ $("score").textContent = plays ? wins + " on / " + plays + " thrown" : ""; }
+
+/* ---- impact ---- */
+function onImpact(mag){
+  var t = performance.now();
+  if (t - lastImpact < 900) return;
+  lastImpact = t;
+  plays++; tally();
+  waiting = true;
+  lastContact = 0; lastPos = null; confirmedAfter = 0;
+  down = e_touchCount();
+
+  say("settle", "…", "impact " + mag.toFixed(1) + " m/s2");
+  beep(440, 80);
+  shake();
+  setTimeout(shake, 220);
+  setTimeout(shake, 440);
+
+  /* One more buzz, and only what happens after it decides the round. A packet
+     still sitting there gets shaken back into view. A packet that bounced off
+     has nothing to shake. */
+  setTimeout(function(){
+    if (!waiting) return;
+    confirmedAfter = performance.now();
+    say("confirm", "…", "checking");
+    shake();
+  }, CONFIRM_AT);
+
+  clearTimeout(waitTimer);
+  waitTimer = setTimeout(verdict, VERDICT_AT);
+}
+
+function verdict(){
+  if (!waiting) return;
+  waiting = false;
+  lastImpact = performance.now();          // lockout covers the pickup
+
+  /* Still on if something is resting there right now, or if the confirm buzz
+     shook it back into view. A held contact is silent, so both count. */
+  var stillOn = down > 0 || (confirmedAfter && lastContact > confirmedAfter);
+  if (stillOn) {
+    wins++;
+    say("win", "WIN", lastPos ? lastPos.x + "% across, " + lastPos.y + "% down" : "on the phone");
+    beep(760, 90);
+    setTimeout(function(){ beep(1140, 160); }, 95);
+  } else {
+    say("lose", "LOSE", lastContact ? "hit it and bounced off" : "missed the phone");
+    $("spot").style.display = "none";
+    beep(200, 130);
+    setTimeout(function(){ beep(140, 240); }, 140);
+  }
+  tally();
+  setTimeout(idle, 1600);
+}
+
+function motion(ax, ay, az){
+  var m = Math.hypot(ax, ay, az);
+  var t = performance.now();
+  if (t < calEnd) { cal.push(m); return; }
+  if (cal.length) {
+    var mx = 0; for (var i=0;i<cal.length;i++) if (cal[i] > mx) mx = cal[i];
+    accThr = Math.max(0.25, mx * 3.5); cal = [];
+    $("sub").textContent = "trigger " + accThr.toFixed(2) + " m/s2";
+  }
+  if (m > accThr) onImpact(m);
+}
+
+function startMotion(){
+  if (window.LinearAccelerationSensor) {
+    try {
+      var a = new LinearAccelerationSensor({frequency:200});
+      a.onreading = function(){ motion(a.x, a.y, a.z); };
+      a.onerror = dm; a.start();
+      calEnd = performance.now() + 1500;
+      return;
+    } catch(e){}
+  }
+  dm();
+}
+function dm(){
+  function bind(){
+    calEnd = performance.now() + 1500;
+    addEventListener("devicemotion", function(e){
+      var a = e.acceleration;
+      if (!a || a.x === null) return;
+      motion(a.x||0, a.y||0, a.z||0);
+    });
+  }
+  if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission)
+    DeviceMotionEvent.requestPermission().then(bind).catch(function(){});
+  else bind();
+}
+
+/* ---- touch ---- */
+function contact(t){
+  lastContact = performance.now();
+  lastPos = { x: Math.round(t.clientX/innerWidth*100), y: Math.round(t.clientY/innerHeight*100) };
+  var r = Math.max(t.radiusX||0, t.radiusY||0), d = Math.max(70, r*2);
+  $("spot").style.cssText =
+    "left:"+t.clientX+"px;top:"+t.clientY+"px;width:"+d+"px;height:"+d+"px;display:block";
+}
+
+document.addEventListener("touchstart", function(e){
+  if (e.target.id === "buzz") return;
+  e.preventDefault();
+  if (!armed) {
+    armed = true;
+    try { ctx = new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); } catch(err){}
+    startMotion();
+    idle();
+    if (!navigator.vibrate) $("sub").textContent = "no vibrate api on this browser";
+    tally();
+    return;
+  }
+  down = e.touches.length;
+  if (!waiting) return;
+  contact(e.changedTouches[0]);
+  beep(880, 50);
+  if (!confirmedAfter) $("sub").textContent = "on the phone";
+}, {passive:false});
+
+document.addEventListener("touchmove", function(e){
+  if (e.target.id === "buzz") return;
+  e.preventDefault();
+  if (waiting) contact(e.changedTouches[0]);
+}, {passive:false});
+
+function lift(e){
+  if (e.target.id === "buzz") return;
+  e.preventDefault();
+  down = e.touches.length;
+  if (waiting && !confirmedAfter) $("sub").textContent = "came off, checking again";
+}
+document.addEventListener("touchend", lift, {passive:false});
+document.addEventListener("touchcancel", lift, {passive:false});
+
+function e_touchCount(){ return down; }
+
+$("buzz").addEventListener("click", function(e){
+  e.stopPropagation();
+  shake(); beep(440, 60);
+});
+})();
+</script>
+</body>
+</html>
