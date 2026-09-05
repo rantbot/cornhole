@@ -270,15 +270,6 @@
     background: rgba(244,239,228,.10); color: var(--chalk);
     border: 1px solid var(--line-2); font-size: var(--t-sm); font-weight: 700;
   }
-  /* Nothing is listened for until this is tapped, so collecting a bag can
-     never be mistaken for a throw. */
-  #go {
-    flex: 1 1 auto; align-self: stretch; margin: 9px 0; min-width: 0;
-    border-radius: var(--r-md); border: none; color: #08151F;
-    font-size: 26px; font-weight: 800; letter-spacing: -.02em;
-    box-shadow: 0 0 22px var(--turn-glow), inset 0 -4px 0 rgba(0,0,0,.22);
-    background: var(--turn-lit);
-  }
   #why {
     flex: 1 1 auto; min-width: 0; text-align: center;
     font-size: var(--t-md); font-weight: 800; line-height: 1.2; color: var(--chalk);
@@ -329,6 +320,36 @@
     28%,56%,84% { transform: translateX(10px); }
   }
 
+  /* Nothing is listened for until this is tapped, so collecting a bag can
+     never be mistaken for a throw. It covers the board, because that is where
+     you are already looking. */
+  #gate {
+    position: fixed; inset: var(--rail-h) 0 var(--foot-h) 0; z-index: 4;
+    display: none; align-items: center; justify-content: center; padding: 0 22px;
+    background: rgba(6,13,20,.72);
+  }
+  #gate.on { display: flex; }
+  #gate .inner {
+    width: 100%; max-width: 330px; padding: 26px 20px 28px; border-radius: var(--r-lg);
+    text-align: center; border: 2px solid var(--turn);
+    background: linear-gradient(180deg, rgba(12,26,38,.96), rgba(6,13,20,.96));
+    box-shadow: 0 0 34px var(--turn-glow), var(--lift);
+  }
+  #gate b {
+    display: block; font-size: 38px; font-weight: 800; letter-spacing: -.04em;
+    line-height: 1.02; color: var(--turn-lit);
+    text-shadow: 0 0 20px var(--turn-glow);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #gate span {
+    display: block; margin-top: 10px; font-size: var(--t-md); font-weight: 700;
+    color: var(--chalk-2);
+  }
+  #gate .inner::after {
+    content: ""; display: block; margin: 16px auto 0; width: 74px; height: 6px;
+    border-radius: 3px; background: var(--turn); box-shadow: 0 0 14px var(--turn);
+    animation: breathe 2.2s ease-in-out infinite;
+  }
   #burst { position: fixed; inset: 0; z-index: 7; pointer-events: none; overflow: hidden; }
   .bit { position: absolute; width: 11px; height: 11px; margin: -5px 0 0 -5px;
          border-radius: var(--r-xs); opacity: 0;
@@ -501,6 +522,12 @@
   <div id="ready"></div>
   <div id="dots"></div>
   <div id="live"></div>
+  <div id="gate">
+    <div class="inner">
+      <b id="gateWho">Player 1</b>
+      <span>Tap when you're ready to throw</span>
+    </div>
+  </div>
   <div id="burst"></div>
   <div id="start">
     <h1 id="startTitle">Pocket<br>Cornhole</h1>
@@ -518,7 +545,7 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b68</div>
+    <div id="build">b69</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -532,7 +559,6 @@
   <div id="foot">
     <button id="clear">Exit</button>
     <div id="why"></div>
-    <button id="go" class="hide">Ready</button>
     <button id="gear">Settings</button>
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
@@ -880,12 +906,9 @@ function startGame(n){
 function idle(){
   waiting = false; clearRound();
   $("why").className = "";
-  var gate = armed && !paused && !gameOver;
-  $("go").classList.toggle("hide", !gate);
-  $("why").classList.toggle("hide", gate);
-  if (gate) {
-    $("go").textContent = players === 2 ? name(turn) + " \u00b7 ready" : "Ready";
-  }
+  var showGate = armed && !paused && !gameOver && !ready && !waiting;
+  $("gate").classList.toggle("on", showGate);
+  $("gateWho").textContent = players === 2 ? name(turn) : "Your throw";
   if (!paused && armed) {
     if (players === 2) {
       $("why").textContent = name(turn);
@@ -1042,6 +1065,7 @@ function onImpact(m, zShare){
   appealUntil = 0;
   pendingDot = null; pendingUntil = 0;
 
+  $("gate").classList.remove("on");
   document.body.className = "settle";
   $("bigText").textContent = "…"; $("big").classList.add("on");
   $("why").textContent = "";
@@ -1245,7 +1269,7 @@ function dm(){
 function offBoard(el){
   if (!el || !el.closest) return false;
   if (el.tagName === "BUTTON" || el.tagName === "INPUT") return true;
-  return !!el.closest("#hud, #foot, #install, #start, #confirm, #settings, #rename");
+  return !!el.closest("#gate, #hud, #foot, #install, #start, #confirm, #settings, #rename");
 }
 
 function contact(t){
@@ -1483,14 +1507,14 @@ $("renameDone").addEventListener("click", function(e){ e.stopPropagation(); clos
 $("renameInput").addEventListener("keydown", function(e){ if (e.key === "Enter") closeRename(); });
 $("renameInput").addEventListener("click", function(e){ e.stopPropagation(); });
 
-$("go").addEventListener("click", function(e){
+$("gate").addEventListener("click", function(e){
   e.stopPropagation();
+  if (ready) return;
   ready = true;
+  $("gate").classList.remove("on");
   /* your finger leaving the glass is a bigger jolt than any packet */
   deafUntil = performance.now() + 1100;
   lastTouchStart = performance.now();
-  $("go").classList.add("hide");
-  $("why").classList.remove("hide");
   $("why").className = players === 2 ? "t" + turn : "";
   $("why").textContent = players === 2 ? name(turn) + ", throw" : "Throw";
   beep(1250, 60);
