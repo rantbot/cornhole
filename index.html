@@ -581,7 +581,7 @@
     </div>
     <button class="btn btn-go hide" id="startTap">Tap when ready</button>
     <small id="startFoot">Then hands off the phone for a moment.</small>
-    <div id="build">b76</div>
+    <div id="build">b77</div>
   </div>
   <div id="big"><span id="bigText"></span></div>
     <div id="hud">
@@ -945,11 +945,17 @@ function startGame(n){
 
 function idle(){
   waiting = false; clearRound();
-  /* Every throw needs its own tap. Without this the gate is answered once and
-     never asked again. */
-  ready = false;
+  /* Head to head needs a tap per bag, since it doubles as the handover and
+     keeps a collected bag from scoring. Practice is one person throwing over
+     and over, so it stays armed and just waits out the moment after a verdict. */
+  if (players === 1) {
+    ready = true;
+    deafUntil = Math.max(deafUntil, performance.now() + 1200);
+  } else {
+    ready = false;
+  }
   $("why").className = "";
-  var showGate = armed && !paused && !gameOver;
+  var showGate = armed && !paused && !gameOver && players === 2;
   $("gate").classList.toggle("on", showGate);
   $("gateWho").textContent = players === 2 ? name(turn) : "Your throw";
   if (!paused && armed) {
