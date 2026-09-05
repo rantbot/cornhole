@@ -23,7 +23,6 @@
   body.settle { background: #15306b; }
   body.win    { background: #0b4a26; }
   body.lose   { background: #5c1414; }
-  body.miss   { background: #4a3c10; }
 
   /* everything above the play surface must not swallow a touch */
   #dots, #big, #hud, #why { pointer-events: none; }
@@ -84,10 +83,16 @@
          font: 600 16px/1.35 -apple-system, system-ui, sans-serif; }
 
   /* two small corner controls, well clear of where a packet lands */
-  .corner { position: fixed; top: calc(0.8vh + env(safe-area-inset-top));
-            width: 44px; height: 44px; border-radius: 50%; z-index: 4;
-            background: #232323; color: #999; border: 1px solid #383838;
-            font: 600 11px -apple-system, system-ui, sans-serif; }
+  #ctl { position: fixed; top: calc(0.6vh + env(safe-area-inset-top)); left: 6px; right: 6px;
+         z-index: 4; display: flex; gap: 6px; }
+  #ctl button { flex: 1; padding: 6px 4px 7px; border-radius: 9px;
+                background: rgba(30,34,40,.9); border: 1px solid #333c46;
+                color: #7d8894; font: 600 10px/1.15 -apple-system, system-ui, sans-serif;
+                text-align: center; }
+  #ctl button span { display: block; font-size: 14px; font-weight: 800; color: #dbe3ea;
+                     margin-top: 3px; letter-spacing: -.01em; }
+  #ctl button.lo span { color: #8fd6ff; }
+  #ctl button.hi span { color: #ffcf6b; }
   /* a hairline where the browser bar sits, nothing more */
   #oob { position: fixed; top: 0; left: 0; right: 0; height: 1px; z-index: 0;
          pointer-events: none; display: none; background: #33404d; }
@@ -105,10 +110,6 @@
   #build { position: fixed; right: 6px; bottom: calc(4px + env(safe-area-inset-bottom));
            z-index: 3; pointer-events: none; color: #3a4550;
            font: 500 9px ui-monospace, Menlo, monospace; }
-  #clear { left: 8px; }
-  #miss  { left: 58px; }
-  #cut   { right: 8px; }
-  #trig  { right: 58px; }
 </style>
 </head>
 <body>
@@ -118,15 +119,16 @@
   <div id="dots"></div>
   <div id="live"></div>
   <div id="burst"></div>
-  <div id="build">b23</div>
+  <div id="build">b24</div>
   <div id="big"></div>
   <div id="hud"><span id="pts">0</span><span id="ptsSub">tap to start</span></div>
   <div id="why"></div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
-  <button class="corner" id="clear">clear</button>
-  <button class="corner" id="miss">miss<br>off</button>
-  <button class="corner" id="trig">.35</button>
-  <button class="corner" id="cut">550</button>
+  <div id="ctl">
+    <button id="trig">picks up throws<span>med</span></button>
+    <button id="cut">calls bounces<span>med</span></button>
+    <button id="clear">board<span>clear</span></button>
+  </div>
 
 <script>
 (function(){
@@ -141,9 +143,6 @@ var LATE_FROM  = 550;
 var EXTRA_BUZZ = [0, 350, 700], EXTRA_FOR = 1100;
 var ARM_QUIET  = 2000;          // silent, no countdown on screen
 var BUZZ_DUR   = 300, BUZZ_TAIL = 200, ACC_THR = 0.35;
-function faint(){ return ACC_THR * 0.55; }  // scales with the trigger
-var MISS_WAIT  = 700;   // if nothing follows a faint knock, it landed off the phone
-var THRS = [0.10, 0.15, 0.25, 0.35, 0.50];
 
 var armed = false, ctx = null, waiting = false, extended = false;
 var wins = 0, plays = 0;
@@ -151,9 +150,6 @@ var lastImpact = -1e9, deafUntil = 0;
 var down = 0, lastContact = 0, firstPos = null, lastPos = null;
 var roundT0 = 0, timers = [], poll = null, lastDot = null, impactMag = 0;
 var secondHit = 0;      // it came off and hit something else
-var misses = 0, missAt = 0, missTimer = null;
-var MISS_ON = false;        // off until you turn it on
-var missCool = 0;           // nothing may fire again for a while after one does
 var lastQuiet = 0;          // last moment the phone was actually still
 var points = 0, firstPx = null, lastPx = null;
 var impactZ = 1;          // how much of the hit went straight down through the glass
@@ -234,8 +230,8 @@ function zone(p){
 }
 function hud(){
   $("pts").textContent = points;
-  $("ptsSub").textContent = (plays || misses)
-    ? (points === 1 ? "point" : "points") + " from " + (plays + misses) + " throws"
+  $("ptsSub").textContent = plays
+    ? (points === 1 ? "point" : "points") + " from " + plays + " throws"
     : "throw";
 }
 function bumpScore(){
@@ -310,7 +306,6 @@ function onImpact(m, zShare){
   plays++; hud();
   lastContact = 0; firstPos = null; lastPos = null; firstPx = null; lastPx = null; secondHit = 0;
   appealUntil = 0;
-  cancelMiss();
 
   document.body.className = "settle";
   $("big").textContent = "…"; $("big").classList.add("on");
@@ -423,34 +418,11 @@ function motion(ax, ay, az){
         && performance.now() - lastQuiet < 120) secondHit = m;   // a fresh thump, not ringdown
     return;                       // a round in flight is never restarted
   }
-  if (m > ACC_THR) { cancelMiss(); onImpact(m, Math.abs(az) / m); return; }
+  if (m > ACC_THR) { onImpact(m, Math.abs(az) / m); return; }
   if (m < faint() * 0.5) lastQuiet = performance.now();
-  if (MISS_ON && m > faint()) watchMiss(m);
 }
 
-function cancelMiss(){ clearTimeout(missTimer); missTimer = null; missAt = 0; }
 
-/* Too soft to have hit the phone, but the table carried something. If nothing
-   lands on the screen and no real impact follows, it went wide. */
-function watchMiss(m){
-  var t = performance.now();
-  if (waiting || missTimer || t < deafUntil || t < missCool) return;
-  if (t - lastImpact < 900) return;
-  if (m < 0.22) return;                    // a hard floor, whatever the trigger is
-  if (t - lastQuiet > 400) return;         // sustained rumble is not a throw
-  missAt = t;
-  missTimer = setTimeout(function(){
-    missTimer = null;
-    if (waiting || lastContact > missAt || down > 0) return;
-    misses++; hud();
-    missCool = performance.now() + 3000;
-    document.body.className = "miss";
-    $("big").textContent = "MISS"; $("big").classList.add("on");
-    $("why").textContent = "Only a faint knock at " + m.toFixed(2) + " and nothing on the screen.";
-    beep(300, 90);
-    setTimeout(function(){ if (!waiting) idle(); }, 1400);
-  }, MISS_WAIT);
-}
 function startMotion(){
   if (window.LinearAccelerationSensor) {
     try {
@@ -487,7 +459,7 @@ function contact(t){
   lv.style.display = waiting ? "block" : "none";
 }
 document.addEventListener("touchstart", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
   e.preventDefault();
   if (!armed) {
     armed = true;
@@ -504,12 +476,12 @@ document.addEventListener("touchstart", function(e){
   contact(e.changedTouches[0]);
 }, {passive:false});
 document.addEventListener("touchmove", function(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
   e.preventDefault();
   if (waiting) contact(e.changedTouches[0]);
 }, {passive:false});
 function lift(e){
-  if (e.target.tagName === "BUTTON" || e.target.closest("#install")) return;
+  if (e.target.tagName === "BUTTON" || e.target.closest("#install") || e.target.closest("#ctl")) return;
   e.preventDefault();
   down = e.touches.length;
 }
@@ -553,27 +525,55 @@ $("clear").addEventListener("click", function(e){
   e.stopPropagation();
   goFullscreen();
   $("dots").innerHTML = ""; lastDot = null;
-  wins = 0; plays = 0; points = 0; misses = 0; hud();
+  wins = 0; plays = 0; points = 0; hud();
   $("why").textContent = "";
 });
+/* Five steps each, spread wide, so the setting that works is somewhere inside
+   the scale rather than off the end of it. */
+var TRIG_STEPS = [
+  { name: "highest", acc: 0.05 },
+  { name: "high",    acc: 0.12 },
+  { name: "med",     acc: 0.30 },
+  { name: "low",     acc: 0.70 },
+  { name: "lowest",  acc: 1.50 }
+];
+var CUT_STEPS = [
+  { name: "never",  late: 0    },
+  { name: "rarely", late: 250  },
+  { name: "med",    late: 550  },
+  { name: "often",  late: 1000 },
+  { name: "always", late: 1500 }
+];
+var trigIdx = 2, cutIdx = 2;
+
+function paint(btn, label, steps, idx){
+  btn.innerHTML = label + "<span>" + steps[idx].name + "</span>";
+  btn.className = idx < 2 ? "lo" : idx > 2 ? "hi" : "";
+}
+function applyTrig(){
+  ACC_THR = TRIG_STEPS[trigIdx].acc;
+  paint($("trig"), "picks up throws", TRIG_STEPS, trigIdx);
+}
+function applyCut(){
+  LATE_FROM = CUT_STEPS[cutIdx].late;
+  paint($("cut"), "calls bounces", CUT_STEPS, cutIdx);
+}
+function flash(msg){
+  $("why").textContent = msg;
+  setTimeout(function(){ if (!waiting) $("why").textContent = ""; }, 1900);
+}
 $("trig").addEventListener("click", function(e){
   e.stopPropagation();
-  ACC_THR = THRS[(THRS.indexOf(ACC_THR) + 1) % THRS.length];
-  this.textContent = ACC_THR.toFixed(2).replace("0.", ".");
+  trigIdx = (trigIdx + 1) % TRIG_STEPS.length; applyTrig();
+  flash("Starts a round above " + ACC_THR.toFixed(2) + " m/s2.");
 });
-$("miss").addEventListener("click", function(e){
-  e.stopPropagation();
-  MISS_ON = !MISS_ON;
-  missCool = 0;
-  this.innerHTML = "miss<br>" + (MISS_ON ? "on" : "off");
-  this.style.color = MISS_ON ? "#f0c674" : "#999";
-});
-var CUTS = [0, 150, 300, 400, 550, 700, 900];
 $("cut").addEventListener("click", function(e){
   e.stopPropagation();
-  LATE_FROM = CUTS[(CUTS.indexOf(LATE_FROM) + 1) % CUTS.length];
-  this.textContent = LATE_FROM === 0 ? "any" : LATE_FROM;
+  cutIdx = (cutIdx + 1) % CUT_STEPS.length; applyCut();
+  flash(LATE_FROM === 0 ? "Any contact counts, so bounces will score."
+                        : "Needs contact after " + LATE_FROM + "ms to be sure it stayed.");
 });
+applyTrig(); applyCut();
 })();
 </script>
 </body>
