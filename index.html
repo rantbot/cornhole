@@ -18,7 +18,10 @@
 <script>
 /* A phone has a coarse pointer and no hover. A laptop with a touchscreen has
    both, so it is treated as a phone, which is the right call: it can still
-   feel a packet land on it. */
+   feel a packet land on it.
+   
+   Anything else gets a QR code and nothing else, because the game is played
+   by throwing something at the screen and a trackpad cannot do that. */
 (function () {
   function onAPhone() {
     return window.matchMedia &&
@@ -28,13 +31,12 @@
     if (onAPhone()) return;
     var panel = document.getElementById("desk");
     if (!panel) return;
+    /* No way past this. The board underneath cannot score without a
+       touchscreen, so letting somebody through would only waste their time. */
     panel.hidden = false;
     if (window.experimentsTrack) {
       window.experimentsTrack("opened-on-a-computer", { once: true });
     }
-    document.getElementById("deskAnyway").addEventListener("click", function () {
-      panel.hidden = true;
-    });
   });
 })();
 </script>
@@ -607,12 +609,6 @@
     font-size: 15px;
     line-height: 1.55;
   }
-  #deskAnyway {
-    margin-top: 6px;
-    background: transparent;
-    color: var(--chalk-3);
-    border: 1px solid var(--rail);
-  }
 </style>
 </head>
 <body>
@@ -678,11 +674,12 @@
       <span class="a">Pocket</span>
       <span class="b">Cornhole</span>
     </div>
-    <p id="deskLead">This one is played on a phone.</p>
+    <p id="deskLead">You need a phone for this one.</p>
     <img id="deskQr" src="./qr.png" alt="" width="220" height="220">
-    <p id="deskBody">Point a camera at that, lay the phone flat on a table,
-      and throw a foil-wrapped sugar packet at it.</p>
-    <button class="btn" id="deskAnyway">Look around anyway</button>
+    <p id="deskBody">The game reads where a packet lands through the
+      touchscreen, so there is nothing here a laptop can do. Point a camera at
+      that code, lay the phone flat on a table, and throw a foil-wrapped sugar
+      packet at it.</p>
   </div>
 
   <div id="settings">
