@@ -1,9 +1,9 @@
 /* Network first, so pushing a new build shows up immediately. The cache is
    only a fallback for when there is no signal at the table. */
-const CACHE = "pocket-b77";
-const FILES = ["./index.html", "./manifest.webmanifest",
+const CACHE = "pocket-b78";
+const FILES = ["./index.html", "./manifest.webmanifest", "./usage.js",
                "./icon-192.png", "./icon-512.png", "./icon-maskable.png",
-               "./apple-touch-icon.png"];
+               "./apple-touch-icon.png", "./qr.png"];
 
 self.addEventListener("install", e => {
   self.skipWaiting();

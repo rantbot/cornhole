@@ -11,6 +11,33 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A1B2A">
 <link rel="manifest" href="./manifest.webmanifest">
+<!-- Anonymous counts for the experiments catalogue. Records the name of a
+     moment and nothing about the game itself. Delete this line to switch it
+     off entirely. -->
+<script src="./usage.js"></script>
+<script>
+/* A phone has a coarse pointer and no hover. A laptop with a touchscreen has
+   both, so it is treated as a phone, which is the right call: it can still
+   feel a packet land on it. */
+(function () {
+  function onAPhone() {
+    return window.matchMedia &&
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+  }
+  window.addEventListener("DOMContentLoaded", function () {
+    if (onAPhone()) return;
+    var panel = document.getElementById("desk");
+    if (!panel) return;
+    panel.hidden = false;
+    if (window.experimentsTrack) {
+      window.experimentsTrack("opened-on-a-computer", { once: true });
+    }
+    document.getElementById("deskAnyway").addEventListener("click", function () {
+      panel.hidden = true;
+    });
+  });
+})();
+</script>
 <style>
   /* ===============================================================
      Pocket Cornhole
@@ -541,6 +568,51 @@
     #startTap, .bit, body.three #hole,
     body.lose #board, body.lose #dots { animation: none; }
   }
+  /* ===============================================================
+     Somebody arriving on a laptop. Uses the same rails and chalk as
+     everything else, so it reads as part of the game rather than an
+     error page.
+     =============================================================== */
+  #desk {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 32px;
+    text-align: center;
+    background: var(--ink);
+  }
+  #desk[hidden] { display: none; }
+  #desk .wordmark { margin-bottom: 4px; }
+  #deskLead {
+    margin: 0;
+    color: var(--chalk);
+    font-size: 20px;
+  }
+  #deskQr {
+    width: 220px;
+    height: 220px;
+    border-radius: 14px;
+    background: var(--chalk);
+    padding: 10px;
+  }
+  #deskBody {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--chalk-2);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  #deskAnyway {
+    margin-top: 6px;
+    background: transparent;
+    color: var(--chalk-3);
+    border: 1px solid var(--rail);
+  }
 </style>
 </head>
 <body>
@@ -598,6 +670,20 @@
     <button id="gear">Settings</button>
   </div>
   <div id="install"><span id="installText"></span><button id="dismiss">&times;</button></div>
+  <!-- A phone game reached from a laptop. Rather than letting somebody find
+       out by throwing something at their monitor, send them to the phone they
+       already have on them. -->
+  <div id="desk" hidden>
+    <div class="wordmark">
+      <span class="a">Pocket</span>
+      <span class="b">Cornhole</span>
+    </div>
+    <p id="deskLead">This one is played on a phone.</p>
+    <img id="deskQr" src="./qr.png" alt="" width="220" height="220">
+    <p id="deskBody">Point a camera at that, lay the phone flat on a table,
+      and throw a foil-wrapped sugar packet at it.</p>
+    <button class="btn" id="deskAnyway">Look around anyway</button>
+  </div>
 
   <div id="settings">
     <div class="sheet">
@@ -681,6 +767,11 @@ var PRACTICE_KEEP = 6;      // bags left lying on the board before the oldest is
 /* Head to head banks points at the end of a round so the two sides can cancel.
    Practice has nobody to cancel against, so it scores as you go. */
 function award(owner, n){
+  /* Three is the hole, one is the board. Counted so we can tell a game where
+     nothing lands from one where it works. */
+  if (window.experimentsTrack) {
+    window.experimentsTrack(n >= 3 ? "sank-one" : "landed-on-the-board");
+  }
   if (players === 1) scores[0] += n; else inning[owner] += n;
 }
 var onBoard = [];           // every bag lying there, so they can be knocked about
@@ -881,6 +972,7 @@ function endFrame(){
   var done = cfg.target && players === 2 &&
              (scores[0] >= cfg.target || scores[1] >= cfg.target);
   if (done) {
+    if (window.experimentsTrack) window.experimentsTrack("finished-a-game");
     gameOver = true;
     var champ = scores[0] > scores[1] ? 0 : 1;
     $("brand").classList.add("hide");
@@ -929,6 +1021,7 @@ function endFrame(){
 }
 
 function startGame(n){
+  if (window.experimentsTrack) window.experimentsTrack(n === 1 ? "started-practice" : "started-head-to-head");
   players = n;
   armed = true;
   silenced = false;
@@ -1517,6 +1610,7 @@ function paintSwatches(){
 [].forEach.call($("targets").children, function(b){
   b.addEventListener("click", function(e){
     e.stopPropagation();
+    if (window.experimentsTrack) window.experimentsTrack("changed-the-target");
     cfg.target = +b.getAttribute("data-t");
     applyCfg(); hud();
   });
@@ -1524,6 +1618,9 @@ function paintSwatches(){
 [].forEach.call($("noise").children, function(b){
   b.addEventListener("click", function(e){
     e.stopPropagation();
+    /* Which table setting people reach for says whether the detection is
+       tuned for the surfaces this actually gets played on. */
+    if (window.experimentsTrack) window.experimentsTrack("changed-the-table");
     cfg.table = +b.getAttribute("data-n");
     applyCfg();
   });
